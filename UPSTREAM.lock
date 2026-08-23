@@ -1,0 +1,80 @@
+schema_version = 1
+generated_at = "2026-08-23"
+
+[[sources]]
+name = "mattpocock-skills"
+repository = "https://github.com/mattpocock/skills"
+commit = "9c32629965586e75a9d2206922dccec91e19f2f2"
+reviewed_head = "5b15a47f2d7150f545fbcacbfe381787fc0230dc"
+license = "MIT"
+copyright = "Copyright (c) 2026 Matt Pocock"
+upstream_paths = [
+  "skills/engineering/ask-matt",
+  "skills/engineering/code-review",
+  "skills/engineering/domain-modeling",
+  "skills/engineering/grill-with-docs",
+  "skills/engineering/implement",
+  "skills/engineering/setup-matt-pocock-skills",
+  "skills/engineering/tdd",
+  "skills/engineering/to-spec",
+  "skills/engineering/to-tickets",
+  "skills/engineering/triage",
+  "skills/productivity/grill-me",
+  "skills/productivity/grilling",
+  "skills/productivity/handoff",
+]
+local_changes = [
+  "Renamed ask-matt to vibe-guide and removed routes to unavailable upstream skills.",
+  "Forked setup-matt-pocock-skills as the idempotent, dry-run-first vibe-init entry point.",
+  "Changed user-facing invocation examples from slash syntax to Codex $skill-name syntax.",
+  "Removed legacy disable-model-invocation frontmatter in favor of agents/openai.yaml policy.",
+  "Kept the project-approved sequential grilling rhythm instead of the snapshot's batched frontier behavior.",
+  "Made implement commits opt-in and code-review capable of inline fallback.",
+  "Aligned local tracker states to ready-for-agent, in-progress, and done.",
+  "Added Codex UI metadata and project-specific documentation integrations.",
+]
+
+[[sources]]
+name = "mattpocock-batch-grill-me"
+repository = "https://github.com/mattpocock/skills"
+commit = "9603c1cc8118d08bc1b3bf34cf714f62178dea3b"
+license = "MIT"
+copyright = "Copyright (c) 2026 Matt Pocock"
+upstream_paths = [
+  "skills/in-progress/batch-grill-me",
+]
+local_changes = [
+  "Removed legacy disable-model-invocation frontmatter in favor of agents/openai.yaml policy.",
+  "Retained the batch interview as a supported workflow after upstream later removed the in-progress directory.",
+]
+
+[[sources]]
+name = "epq-local-extensions"
+repository = "local"
+commit = "c285f1d55aa79604e77c2a42de047619e122caf5"
+license = "project"
+project_paths = [
+  "batch-grill-with-docs",
+  "vibe-guide",
+  "vibe-init",
+]
+local_changes = [
+  "Project-maintained documentation composition, workflow router, executable initializer, and Codex UI metadata.",
+]
+
+[skills]
+batch-grill-me = "mattpocock-batch-grill-me"
+batch-grill-with-docs = "epq-local-extensions"
+code-review = "mattpocock-skills"
+domain-modeling = "mattpocock-skills"
+grill-me = "mattpocock-skills"
+grill-with-docs = "mattpocock-skills"
+grilling = "mattpocock-skills"
+handoff = "mattpocock-skills"
+implement = "mattpocock-skills"
+tdd = "mattpocock-skills"
+to-spec = "mattpocock-skills"
+to-tickets = "mattpocock-skills"
+triage = "mattpocock-skills"
+vibe-guide = "epq-local-extensions"
+vibe-init = "epq-local-extensions"

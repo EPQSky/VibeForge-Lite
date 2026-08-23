@@ -1,0 +1,33 @@
+---
+name: vibe-guide
+description: Route a software task through the installed epq-vibecoding workflow. Use when the user asks which workflow or skill fits their situation.
+---
+
+# Vibe Guide
+
+Route only to skills that ship in this project. Do not suggest an unavailable skill.
+
+## Main Flow
+
+1. Use `$grill-with-docs` when a repository-backed idea still has unresolved product, domain, or architecture decisions.
+2. Use `$batch-grill-with-docs` when the user wants every currently unblocked question in one round while preserving stable decisions in project docs.
+3. Use `$to-spec` once the discussion is stable enough to become a product-facing specification.
+4. Use `$to-tickets` when a multi-session implementation needs independently verifiable vertical slices.
+5. Use `$implement` for one approved ticket or one small, already clear change. Use `$tdd` where a public behavior seam is agreed.
+6. Use `$code-review <fixed-point>` before declaring the implementation complete.
+7. Use `$handoff` when another task or session must continue with the current context.
+
+## Entry Points
+
+- Use `$vibe-init` once to configure a repository, or again to preview/apply a template migration.
+- Use `$grill-me` for a plan that does not belong to a repository and needs no durable project documentation.
+- Use `$triage` for raw incoming issues or external pull requests. Tickets created by `$to-tickets` are already `ready-for-agent` and do not need triage.
+- Use `$domain-modeling` directly when the problem is unclear terminology or an ADR-worthy decision rather than a full product interview.
+- Use `$batch-grill-me` when batch questioning is wanted without writing project domain docs.
+
+## Selection Rules
+
+- Prefer the smallest workflow that produces a complete user-visible result.
+- Do not create a spec and tickets for a trivial, well-understood edit.
+- Do not route directly from an unresolved idea to implementation.
+- Keep `CONTEXT.md` limited to domain language; keep workflow instructions in `AGENTS.md` and `docs/agents/`.

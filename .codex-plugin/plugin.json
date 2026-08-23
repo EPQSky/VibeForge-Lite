@@ -1,0 +1,33 @@
+{
+  "name": "epq-vibecoding",
+  "version": "0.1.0",
+  "description": "A Codex-first workflow from idea grilling through specification, tickets, implementation, and review.",
+  "author": {
+    "name": "EPQ"
+  },
+  "repository": "https://github.com/epq/epq-vibecoding",
+  "license": "MIT",
+  "keywords": [
+    "codex",
+    "vibecoding",
+    "workflow",
+    "skills"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "EPQ Vibecoding",
+    "shortDescription": "A disciplined Codex software-delivery workflow.",
+    "longDescription": "Turn an idea into durable decisions, a specification, vertical tickets, tested implementation, and a two-axis review.",
+    "developerName": "EPQ",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Use $vibe-guide to choose a workflow for this task.",
+      "Use $vibe-init to inspect and initialize this repository.",
+      "Use $grill-with-docs to clarify this feature."
+    ]
+  }
+}

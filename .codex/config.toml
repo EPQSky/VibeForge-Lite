@@ -1,0 +1,3 @@
+# Codex loads project configuration only for trusted projects.
+# Keep shared settings portable; never add user-specific absolute paths or credentials here.
+default_permissions = ":workspace"
