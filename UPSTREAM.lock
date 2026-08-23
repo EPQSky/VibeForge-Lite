@@ -1,6 +1,17 @@
 schema_version = 1
 generated_at = "2026-08-23"
 
+[[tools]]
+name = "openai-codex-plugin-validator"
+repository = "https://github.com/openai/codex"
+commit = "c9b19deb09c1841ce7acc33ddb96276030936a29"
+license = "Apache-2.0"
+upstream_paths = [
+  "codex-rs/skills/src/assets/samples/plugin-creator/scripts/validate_plugin.py",
+  "codex-rs/skills/src/assets/samples/plugin-creator/scripts/identifier_validation.py",
+]
+usage = "CI downloads and executes these files from the fixed commit; they are not redistributed in the Plugin archive."
+
 [[sources]]
 name = "mattpocock-skills"
 repository = "https://github.com/mattpocock/skills"
@@ -29,7 +40,10 @@ local_changes = [
   "Changed user-facing invocation examples from slash syntax to Codex $skill-name syntax.",
   "Removed legacy disable-model-invocation frontmatter in favor of agents/openai.yaml policy.",
   "Kept the project-approved sequential grilling rhythm instead of the snapshot's batched frontier behavior.",
-  "Made implement commits opt-in and code-review capable of inline fallback.",
+  "Made implement commits opt-in and expanded code-review to include committed, staged, unstaged, and untracked work.",
+  "Added explicit untrusted-data boundaries for issue, pull-request, comment, attachment, and reporter-command inputs.",
+  "Limited to-spec to one testing-seam confirmation without reopening product discovery.",
+  "Kept parent specs out of implementation-ready state and reused spec-approved seams without repeated TDD confirmation.",
   "Aligned local tracker states to ready-for-agent, in-progress, and done.",
   "Added Codex UI metadata and project-specific documentation integrations.",
 ]
@@ -49,9 +63,9 @@ local_changes = [
 ]
 
 [[sources]]
-name = "epq-local-extensions"
+name = "vibeforge-lite-local-extensions"
 repository = "local"
-commit = "c285f1d55aa79604e77c2a42de047619e122caf5"
+commit = "dfd5b5c8419bb10cfac2368aefea21af7d28407c"
 license = "project"
 project_paths = [
   "batch-grill-with-docs",
@@ -64,7 +78,7 @@ local_changes = [
 
 [skills]
 batch-grill-me = "mattpocock-batch-grill-me"
-batch-grill-with-docs = "epq-local-extensions"
+batch-grill-with-docs = "vibeforge-lite-local-extensions"
 code-review = "mattpocock-skills"
 domain-modeling = "mattpocock-skills"
 grill-me = "mattpocock-skills"
@@ -76,5 +90,5 @@ tdd = "mattpocock-skills"
 to-spec = "mattpocock-skills"
 to-tickets = "mattpocock-skills"
 triage = "mattpocock-skills"
-vibe-guide = "epq-local-extensions"
-vibe-init = "epq-local-extensions"
+vibe-guide = "vibeforge-lite-local-extensions"
+vibe-init = "vibeforge-lite-local-extensions"

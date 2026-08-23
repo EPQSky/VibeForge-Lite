@@ -1,4 +1,4 @@
-# EPQ Vibecoding Agent 指南
+# VibeForge Lite Agent 指南
 
 ## 交流与交付
 

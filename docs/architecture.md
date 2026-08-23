@@ -15,7 +15,7 @@
 
 初始化器把目标文件分成两类：
 
-- `AGENTS.md`：只管理 `<!-- epq-vibecoding:start -->` 与 `<!-- epq-vibecoding:end -->` 之间的区块。
+- `AGENTS.md`：只管理 `<!-- vibeforge-lite:start -->` 与 `<!-- vibeforge-lite:end -->` 之间的区块。
 - 独立文档：通过 `.vibecoding/state.json` 保存上次写入哈希。只有文件未被用户修改时才自动升级，否则报告冲突。
 
 默认调用是 dry-run。`--apply` 也不会覆盖冲突文件，因此脚本可以安全地重复运行。
@@ -32,3 +32,5 @@
 ## 上游维护
 
 上游 skill 固定在 `UPSTREAM.lock` 的 commit，不动态跟随 `HEAD`。升级时逐项比较行为、重新应用本地 Codex 适配、更新许可证记录，并执行完整验证矩阵。
+
+CI 从 OpenAI `codex` 仓库的固定 commit 下载 Plugin validator 及其同目录依赖，不追踪浮动分支。升级 validator 时先在本地验证新 commit，再更新 workflow 中的固定值。

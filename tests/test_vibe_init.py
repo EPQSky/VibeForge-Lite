@@ -58,7 +58,7 @@ class VibeInitTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             updated = (target / "AGENTS.md").read_text(encoding="utf-8")
             self.assertTrue(updated.startswith(original))
-            self.assertEqual(updated.count("epq-vibecoding:start"), 1)
+            self.assertEqual(updated.count("vibeforge-lite:start"), 1)
 
     def test_existing_file_mode_is_preserved(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -110,10 +110,96 @@ class VibeInitTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             target = Path(tmp)
             agents = target / "AGENTS.md"
-            agents.write_text("<!-- epq-vibecoding:start version=old -->\n", encoding="utf-8")
+            agents.write_text("<!-- legacy-vibecoding:start version=old -->\n", encoding="utf-8")
             result = run(target, "--apply")
             self.assertEqual(result.returncode, 2)
-            self.assertEqual(agents.read_text(encoding="utf-8"), "<!-- epq-vibecoding:start version=old -->\n")
+            self.assertEqual(agents.read_text(encoding="utf-8"), "<!-- legacy-vibecoding:start version=old -->\n")
+
+    def test_legacy_managed_block_is_migrated_in_place(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp)
+            agents = target / "AGENTS.md"
+            legacy_namespace = "".join(chr(value) for value in (101, 112, 113)) + "-vibecoding"
+            agents.write_text(
+                "# Team rules\n\n"
+                f"<!-- {legacy_namespace}:start version=0.0.1 -->\n"
+                "old managed content\n"
+                f"<!-- {legacy_namespace}:end -->\n"
+                "\nKeep this exact rule.\n",
+                encoding="utf-8",
+            )
+
+            result = run(target, "--apply")
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            updated = agents.read_text(encoding="utf-8")
+            self.assertIn("<!-- vibeforge-lite:start version=0.1.0 -->", updated)
+            self.assertNotIn(legacy_namespace, updated)
+            self.assertTrue(updated.endswith("\nKeep this exact rule.\n"))
+
+    def test_mismatched_marker_namespaces_are_a_conflict(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp)
+            agents = target / "AGENTS.md"
+            original = (
+                "<!-- alpha-vibecoding:start version=0.0.1 -->\n"
+                "user-owned content\n"
+                "<!-- beta-vibecoding:end -->\n"
+            )
+            agents.write_text(original, encoding="utf-8")
+
+            result = run(target, "--apply")
+
+            self.assertEqual(result.returncode, 2)
+            self.assertEqual(agents.read_text(encoding="utf-8"), original)
+
+    def test_unknown_matching_marker_namespace_is_a_conflict(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp)
+            agents = target / "AGENTS.md"
+            original = (
+                "<!-- another-vibecoding:start version=0.0.1 -->\n"
+                "user-owned content\n"
+                "<!-- another-vibecoding:end -->\n"
+            )
+            agents.write_text(original, encoding="utf-8")
+
+            result = run(target, "--apply")
+
+            self.assertEqual(result.returncode, 2)
+            self.assertEqual(agents.read_text(encoding="utf-8"), original)
+
+    def test_github_tracker_does_not_create_local_scratch(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp)
+
+            result = run(target, "--tracker", "github", "--apply")
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertFalse((target / ".scratch").exists())
+            agents = (target / "AGENTS.md").read_text(encoding="utf-8")
+            self.assertNotIn(".scratch/<feature>", agents)
+            tracker = (target / "docs/agents/issue-tracker.md").read_text(encoding="utf-8")
+            self.assertIn("GitHub Issues as the system of record", tracker)
+
+    @unittest.skipUnless(hasattr(os, "symlink"), "symbolic links are unavailable")
+    def test_symlinked_managed_parent_stops_all_writes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            target = base / "target"
+            outside = base / "outside"
+            target.mkdir()
+            outside.mkdir()
+            os.symlink(outside, target / "docs", target_is_directory=True)
+
+            result = run(target, "--apply")
+
+            self.assertEqual(result.returncode, 2)
+            payload = json.loads(result.stdout)
+            conflicts = {item["path"] for item in payload["actions"] if item["action"] == "conflict"}
+            self.assertIn("docs/agents/domain.md", conflicts)
+            self.assertFalse((target / "AGENTS.md").exists())
+            self.assertEqual(list(outside.rglob("*")), [])
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 ---
 name: vibe-init
-description: Initialize or migrate a repository for the epq-vibecoding workflow with a dry-run-first, idempotent, conflict-aware process. Use when a project needs Agent guidance, domain docs, tracker conventions, or template upgrades.
+description: Initialize or migrate a repository for the VibeForge Lite workflow with a dry-run-first, idempotent, conflict-aware process. Use when a project needs Agent guidance, domain docs, tracker conventions, or template upgrades.
 ---
 
 # Vibe Init
@@ -23,9 +23,9 @@ The first command is the default dry-run. Do not use `--apply` until the user ha
 - Maintain generated `AGENTS.md` content inside one versioned managed block:
 
 ```md
-<!-- epq-vibecoding:start -->
+<!-- vibeforge-lite:start -->
 ...
-<!-- epq-vibecoding:end -->
+<!-- vibeforge-lite:end -->
 ```
 
 - Preserve content outside the managed block byte-for-byte where practical.

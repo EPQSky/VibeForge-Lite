@@ -5,7 +5,7 @@ description: Review changes since a fixed point along Standards and Spec axes, r
 
 # Code Review
 
-Review `git diff <fixed-point>...HEAD` along two independent axes:
+Review the complete effective change since a fixed point along two independent axes. This includes committed, staged, unstaged, and untracked work.
 
 - **Standards:** repository rules, correctness, security, maintainability, and relevant code smells.
 - **Spec:** missing requirements, incorrect behavior, scope creep, and verification gaps against the originating request.
@@ -14,8 +14,11 @@ Review `git diff <fixed-point>...HEAD` along two independent axes:
 
 - Resolve the user-provided commit, branch, tag, or merge-base.
 - If no fixed point is provided, infer the branch merge-base when unambiguous; otherwise ask.
-- Capture the three-dot diff and `git log <fixed-point>..HEAD --oneline` once.
-- Stop early for a bad reference or empty diff.
+- Resolve `<review-base>` with `git merge-base <fixed-point> HEAD`, then capture `git diff <review-base>` so tracked working-tree changes are included.
+- Capture staged and unstaged summaries separately when that distinction affects ownership or review scope.
+- Capture untracked paths with `git ls-files --others --exclude-standard`; read relevant untracked files as part of the review.
+- Capture `git log <fixed-point>..HEAD --oneline` once.
+- Stop early only when the committed diff, tracked working-tree diff, and relevant untracked-file set are all empty.
 
 ## 2. Gather Sources
 

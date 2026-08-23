@@ -1,9 +1,9 @@
 ---
 name: to-spec
-description: Turn the current conversation into a spec and publish it to the project issue tracker — no interview, just synthesis of what you've already discussed.
+description: Turn an established conversation into a spec, confirm only its testing seams when needed, and publish it to the configured tracker.
 ---
 
-This skill takes the current conversation context and codebase understanding and produces a spec (you may know this document as a PRD). Do NOT interview the user — just synthesize what you already know.
+This skill takes the current conversation context and codebase understanding and produces a spec (you may know this document as a PRD). Do not reopen product discovery or ask a new requirements interview. Synthesize established decisions and use a single testing-seam confirmation only when the seams were not already agreed.
 
 The issue tracker and triage label vocabulary should have been provided to you. If not, run `$vibe-init` first.
 
@@ -13,9 +13,9 @@ The issue tracker and triage label vocabulary should have been provided to you. 
 
 2. Sketch out the seams at which you're going to test the feature. Existing seams should be preferred to new ones. Use the highest seam possible. If new seams are needed, propose them at the highest point you can. The fewer seams across the codebase, the better - the ideal number is one.
 
-Check with the user that these seams match their expectations.
+If the seams were not already agreed, present them in one concise round as the skill's single testing-seam confirmation. Do not ask unrelated product questions.
 
-3. Write the spec using the template below, then publish it to the project issue tracker. Apply the `ready-for-agent` triage label - no need for additional triage.
+3. Write the spec using the template below, then publish it to the configured tracker. A spec is a parent planning artifact, not an implementation ticket: do not apply `ready-for-agent` unless the configured tracker explicitly defines that label for the next planning step. `$to-tickets` applies implementation-ready state to the vertical tickets it creates. For the local Markdown tracker, write `.scratch/<feature-slug>/spec.md` without a ticket status.
 
 <spec-template>
 

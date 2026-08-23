@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import re
+import subprocess
 import sys
 import tomllib
 from pathlib import Path
@@ -15,7 +16,72 @@ except ImportError:  # pragma: no cover - CI installs requirements-dev.txt
     yaml = None
 
 SKILL_REF = re.compile(r"\$([a-z0-9]+(?:-[a-z0-9]+)*)")
-ABSOLUTE_HOME = re.compile(r"/(?:home|Users)/[^/\s`]+/")
+ABSOLUTE_HOME = re.compile(
+    r"(?:"
+    r"/(?:home|Users)/[^/\s`]+(?:/|(?=\s|$))"
+    r"|(?i:[A-Z]:[\\/]+Users[\\/]+[^\\/\s`]+(?:[\\/]|(?=\s|$)))"
+    r"|(?i:\\\\[^\\/\s`]+[\\/]+Users[\\/]+[^\\/\s`]+(?:[\\/]|(?=\s|$)))"
+    r")",
+)
+
+
+def workflow_errors(path: Path) -> list[str]:
+    if not path.exists():
+        return []
+    if yaml is None:
+        return ["PyYAML is required to validate the CI workflow"]
+    try:
+        workflow = yaml.safe_load(path.read_text(encoding="utf-8"))
+    except yaml.YAMLError as exc:
+        return [f"invalid CI workflow YAML: {exc}"]
+    if not isinstance(workflow, dict) or not isinstance(workflow.get("jobs"), dict):
+        return ["CI workflow must define jobs"]
+
+    for job in workflow["jobs"].values():
+        if not isinstance(job, dict) or not isinstance(job.get("steps"), list):
+            continue
+        job_env = job.get("env", {}) if isinstance(job.get("env"), dict) else {}
+        for step in job["steps"]:
+            if not isinstance(step, dict) or not isinstance(step.get("run"), str):
+                continue
+            step_env = step.get("env", {}) if isinstance(step.get("env"), dict) else {}
+            commit = step_env.get("CODEX_VALIDATOR_COMMIT", job_env.get("CODEX_VALIDATOR_COMMIT", ""))
+            executable = "\n".join(
+                line for line in step["run"].splitlines() if not line.lstrip().startswith("#")
+            )
+            has_fixed_commit = isinstance(commit, str) and re.fullmatch(r"[0-9a-f]{40}", commit)
+            downloads_official_validator = (
+                "raw.githubusercontent.com/openai/codex/$CODEX_VALIDATOR_COMMIT/" in executable
+                and re.search(r"(?m)^\s*curl\b[^\n]*validate_plugin\.py", executable)
+            )
+            executes_validator = re.search(r"(?m)^\s*python3\b[^\n]*validate_plugin\.py[^\n]*\s\.\s*$", executable)
+            if has_fixed_commit and downloads_official_validator and executes_validator:
+                return []
+    return ["CI must execute the official Plugin validator from a fixed commit"]
+
+
+def source_lock_errors(root: Path, lock: dict) -> list[str]:
+    errors: list[str] = []
+    sources = lock.get("sources", [])
+    if not isinstance(sources, list):
+        return ["UPSTREAM.lock sources must be an array"]
+    for source in sources:
+        if not isinstance(source, dict) or source.get("repository") != "local":
+            continue
+        name = source.get("name", "unnamed local source")
+        commit = source.get("commit", "")
+        if not isinstance(commit, str) or not re.fullmatch(r"[0-9a-f]{40}", commit):
+            errors.append(f"UPSTREAM.lock local source {name} must use a full Git commit")
+            continue
+        resolved = subprocess.run(
+            ["git", "-c", "core.fsmonitor=false", "cat-file", "-e", f"{commit}^{{commit}}"],
+            cwd=root,
+            check=False,
+            capture_output=True,
+        )
+        if resolved.returncode != 0:
+            errors.append(f"UPSTREAM.lock local source {name} commit is not available: {commit}")
+    return errors
 
 
 def parse_frontmatter(path: Path) -> dict:
@@ -41,20 +107,35 @@ def parse_frontmatter(path: Path) -> dict:
 
 def portability_errors(root: Path) -> list[str]:
     errors: list[str] = []
-    surfaces = [root / "templates/project", root / "skills/vibe-init/assets/project"]
+    generated_surfaces = [root / "templates/project", root / "skills/vibe-init/assets/project"]
+    surfaces = [
+        root / ".codex-plugin",
+        root / "skills",
+        root / "templates/project",
+        root / "skills/vibe-init/assets/project",
+        root / "README.md",
+        root / "CHANGELOG.md",
+        root / "THIRD_PARTY_NOTICES.md",
+        root / "UPSTREAM.lock",
+    ]
     for surface in surfaces:
         if not surface.exists():
             continue
-        for path in surface.rglob("*"):
+        paths = [surface] if surface.is_file() else surface.rglob("*")
+        for path in paths:
             if not path.is_file():
                 continue
-            text = path.read_text(encoding="utf-8")
+            try:
+                text = path.read_text(encoding="utf-8")
+            except UnicodeDecodeError:
+                continue
             rel = path.relative_to(root)
+            is_generated = any(path.is_relative_to(generated) for generated in generated_surfaces)
             if ABSOLUTE_HOME.search(text):
                 errors.append(f"{rel}: absolute home path")
             if re.search(r"\bMinerU\b|mineru-fastapi", text, re.IGNORECASE):
                 errors.append(f"{rel}: source-project term")
-            if ".codex/skills/" in text:
+            if is_generated and ".codex/skills/" in text:
                 errors.append(f"{rel}: legacy project skill path")
             if re.search(r"(?:api[_-]?key|token|password)\s*=\s*['\"][^'\"]+", text, re.IGNORECASE):
                 errors.append(f"{rel}: possible credential")
@@ -68,8 +149,8 @@ def validate(root: Path) -> list[str]:
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     except (FileNotFoundError, json.JSONDecodeError) as exc:
         return [f"invalid plugin manifest: {exc}"]
-    if manifest.get("name") != "epq-vibecoding":
-        errors.append("plugin name must be epq-vibecoding")
+    if manifest.get("name") != "vibeforge-lite":
+        errors.append("plugin name must be vibeforge-lite")
     version = manifest.get("version", "")
     if not re.fullmatch(r"\d+\.\d+\.\d+", version):
         errors.append("plugin version must be strict SemVer")
@@ -112,6 +193,7 @@ def validate(root: Path) -> list[str]:
     locked_skills = set(lock.get("skills", {}))
     if locked_skills != skill_names:
         errors.append(f"UPSTREAM.lock skill map mismatch: missing={sorted(skill_names - locked_skills)} extra={sorted(locked_skills - skill_names)}")
+    errors.extend(source_lock_errors(root, lock))
 
     required = [
         root / "LICENSE",
@@ -119,6 +201,7 @@ def validate(root: Path) -> list[str]:
         root / "THIRD_PARTY_NOTICES.md",
         root / "templates/project/AGENTS.md",
         root / "skills/vibe-init/scripts/vibe_init.py",
+        root / ".github/workflows/validate.yml",
     ]
     for path in required:
         if not path.exists():
@@ -138,6 +221,7 @@ def validate(root: Path) -> list[str]:
 
     if (root / ".codex/skills").exists():
         errors.append("repository must not use .codex/skills")
+    errors.extend(workflow_errors(root / ".github/workflows/validate.yml"))
     errors.extend(portability_errors(root))
     return errors
 

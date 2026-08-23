@@ -1,11 +1,11 @@
 {
-  "name": "epq-vibecoding",
+  "name": "vibeforge-lite",
   "version": "0.1.0",
   "description": "A Codex-first workflow from idea grilling through specification, tickets, implementation, and review.",
   "author": {
-    "name": "EPQ"
+    "name": "VibeForge Lite contributors"
   },
-  "repository": "https://github.com/epq/epq-vibecoding",
+  "repository": "https://github.com/EPQSky/VibeForge-Lite.git",
   "license": "MIT",
   "keywords": [
     "codex",
@@ -15,10 +15,10 @@
   ],
   "skills": "./skills/",
   "interface": {
-    "displayName": "EPQ Vibecoding",
+    "displayName": "VibeForge Lite",
     "shortDescription": "A disciplined Codex software-delivery workflow.",
     "longDescription": "Turn an idea into durable decisions, a specification, vertical tickets, tested implementation, and a two-axis review.",
-    "developerName": "EPQ",
+    "developerName": "VibeForge Lite contributors",
     "category": "Developer Tools",
     "capabilities": [
       "Interactive",

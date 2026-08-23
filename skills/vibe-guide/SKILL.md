@@ -1,6 +1,6 @@
 ---
 name: vibe-guide
-description: Route a software task through the installed epq-vibecoding workflow. Use when the user asks which workflow or skill fits their situation.
+description: Route a software task through the installed VibeForge Lite workflow. Use when the user asks which workflow or skill fits their situation.
 ---
 
 # Vibe Guide

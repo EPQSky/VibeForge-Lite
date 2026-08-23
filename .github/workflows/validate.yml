@@ -9,6 +9,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -16,3 +18,13 @@ jobs:
       - run: python3 scripts/validate_repo.py
       - run: python3 -m unittest discover -s tests -v
       - run: python3 scripts/package_release.py --check
+      - name: Validate Codex Plugin contract
+        env:
+          CODEX_VALIDATOR_COMMIT: c9b19deb09c1841ce7acc33ddb96276030936a29
+        run: |
+          validator_dir="$RUNNER_TEMP/codex-plugin-validator"
+          validator_base="https://raw.githubusercontent.com/openai/codex/$CODEX_VALIDATOR_COMMIT/codex-rs/skills/src/assets/samples/plugin-creator/scripts"
+          mkdir -p "$validator_dir"
+          curl --fail --location "$validator_base/validate_plugin.py" --output "$validator_dir/validate_plugin.py"
+          curl --fail --location "$validator_base/identifier_validation.py" --output "$validator_dir/identifier_validation.py"
+          python3 "$validator_dir/validate_plugin.py" .

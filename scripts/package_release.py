@@ -4,31 +4,120 @@
 from __future__ import annotations
 
 import argparse
+import gzip
 import json
+import re
 import shutil
+import stat
+import subprocess
 import tarfile
 import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+PLUGIN_PATHS = (
+    ".codex-plugin",
+    "skills",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md",
+    "UPSTREAM.lock",
+    "licenses",
+)
+SENSITIVE_NAMES = {
+    ".env",
+    ".env.local",
+    ".npmrc",
+    ".pypirc",
+    "id_dsa",
+    "id_ecdsa",
+    "id_ed25519",
+    "id_rsa",
+}
+ABSOLUTE_HOME_RE = re.compile(
+    rb"(?:"
+    rb"/(?:home|Users)/[^/\s`]+(?:/|(?=\s|$))"
+    rb"|(?i:[A-Z]:[\\/]+Users[\\/]+[^\\/\s`]+(?:[\\/]|(?=\s|$)))"
+    rb"|(?i:\\\\[^\\/\s`]+[\\/]+Users[\\/]+[^\\/\s`]+(?:[\\/]|(?=\s|$)))"
+    rb")",
+)
+CREDENTIAL_RE = re.compile(
+    rb"(?:api[_-]?key|access[_-]?token|auth[_-]?token|password|secret)\s*[:=]\s*['\"]?[^\s'\"`]{8,}",
+    re.IGNORECASE,
+)
+PRIVATE_KEY_RE = re.compile(rb"-----BEGIN (?:[A-Z0-9 ]+ )?PRIVATE KEY-----")
 
 
-def manifest() -> dict:
-    return json.loads((ROOT / ".codex-plugin/plugin.json").read_text(encoding="utf-8"))
+def manifest(source: Path = ROOT) -> dict:
+    return json.loads((source / ".codex-plugin/plugin.json").read_text(encoding="utf-8"))
 
 
-def copy_plugin(destination: Path) -> None:
-    ignored = shutil.ignore_patterns(".git", "dist", "__pycache__", "*.pyc", ".DS_Store")
-    shutil.copytree(ROOT, destination, ignore=ignored)
+def tracked_plugin_files(source: Path = ROOT) -> list[Path]:
+    result = subprocess.run(
+        ["git", "-c", "core.fsmonitor=false", "ls-files", "-z", "--", *PLUGIN_PATHS],
+        cwd=source,
+        check=True,
+        capture_output=True,
+    )
+    files = [Path(raw.decode("utf-8")) for raw in result.stdout.split(b"\0") if raw]
+    if Path(".codex-plugin/plugin.json") not in files:
+        raise RuntimeError("plugin manifest is not tracked by Git")
+    if not any(path.parts and path.parts[0] == "skills" for path in files):
+        raise RuntimeError("no tracked skills were found")
+    untracked = subprocess.run(
+        [
+            "git",
+            "-c",
+            "core.fsmonitor=false",
+            "ls-files",
+            "-z",
+            "--others",
+            "--exclude-standard",
+            "--",
+            *PLUGIN_PATHS,
+        ],
+        cwd=source,
+        check=True,
+        capture_output=True,
+    )
+    untracked_files = [raw.decode("utf-8") for raw in untracked.stdout.split(b"\0") if raw]
+    if untracked_files:
+        raise RuntimeError(f"untracked files exist under release paths: {', '.join(sorted(untracked_files))}")
+    return sorted(files, key=Path.as_posix)
 
 
-def build_marketplace(output: Path) -> Path:
-    data = manifest()
+def copy_plugin(destination: Path, source: Path = ROOT) -> None:
+    destination.mkdir(parents=True)
+    for rel in tracked_plugin_files(source):
+        source_path = source / rel
+        if any(part.lower() in SENSITIVE_NAMES for part in rel.parts) or rel.suffix.lower() in {".key", ".pem"}:
+            raise RuntimeError(f"refusing to package sensitive release path: {rel.as_posix()}")
+        if source_path.is_symlink():
+            raise RuntimeError(f"refusing to package symbolic link: {rel.as_posix()}")
+        if not source_path.is_file():
+            raise RuntimeError(f"tracked plugin path is not a regular file: {rel.as_posix()}")
+        content = source_path.read_bytes()
+        if PRIVATE_KEY_RE.search(content):
+            raise RuntimeError(f"refusing to package private key content: {rel.as_posix()}")
+        if CREDENTIAL_RE.search(content):
+            raise RuntimeError(f"refusing to package possible credential content: {rel.as_posix()}")
+        if ABSOLUTE_HOME_RE.search(content):
+            raise RuntimeError(f"refusing to package absolute home path: {rel.as_posix()}")
+        target = destination / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source_path, target)
+
+
+def build_marketplace(output: Path, source: Path = ROOT) -> Path:
+    data = manifest(source)
     plugin_root = output / "plugins" / data["name"]
-    copy_plugin(plugin_root)
+    copy_plugin(plugin_root, source)
+    interface = data.get("interface", {})
+    display_name = interface.get("displayName", data["name"]) if isinstance(interface, dict) else data["name"]
     catalog = {
-        "name": "epq-vibecoding",
-        "interface": {"displayName": "EPQ Vibecoding"},
+        "name": data["name"],
+        "interface": {"displayName": display_name},
         "plugins": [
             {
                 "name": data["name"],
@@ -45,20 +134,27 @@ def build_marketplace(output: Path) -> Path:
 
 
 def archive_tree(source: Path, destination: Path) -> None:
-    with tarfile.open(destination, "w:gz", format=tarfile.PAX_FORMAT) as archive:
-        for path in sorted(source.rglob("*")):
-            info = archive.gettarinfo(path, arcname=path.relative_to(source.parent))
-            info.uid = info.gid = 0
-            info.uname = info.gname = ""
-            info.mtime = 0
-            if path.is_file():
-                with path.open("rb") as handle:
-                    archive.addfile(info, handle)
-            else:
-                archive.addfile(info)
+    with destination.open("wb") as raw:
+        with gzip.GzipFile(filename="", mode="wb", fileobj=raw, mtime=0) as compressed:
+            with tarfile.open(fileobj=compressed, mode="w", format=tarfile.PAX_FORMAT) as archive:
+                paths = sorted(source.rglob("*"), key=lambda path: path.relative_to(source).as_posix())
+                for path in paths:
+                    if path.is_symlink():
+                        raise RuntimeError(f"refusing to archive symbolic link: {path.relative_to(source)}")
+                    info = archive.gettarinfo(path, arcname=path.relative_to(source.parent))
+                    info.uid = info.gid = 0
+                    info.uname = info.gname = ""
+                    info.mtime = 0
+                    info.mode = 0o755 if path.is_dir() or path.stat().st_mode & stat.S_IXUSR else 0o644
+                    info.pax_headers = {}
+                    if path.is_file():
+                        with path.open("rb") as handle:
+                            archive.addfile(info, handle)
+                    else:
+                        archive.addfile(info)
 
 
-def verify(marketplace: Path, plugin_root: Path) -> None:
+def verify(marketplace: Path, plugin_root: Path, source: Path = ROOT) -> None:
     catalog = json.loads((marketplace / ".agents/plugins/marketplace.json").read_text(encoding="utf-8"))
     entry = catalog["plugins"][0]
     expected = marketplace / entry["source"]["path"]
@@ -67,6 +163,14 @@ def verify(marketplace: Path, plugin_root: Path) -> None:
     packaged = json.loads((plugin_root / ".codex-plugin/plugin.json").read_text(encoding="utf-8"))
     if packaged["name"] != entry["name"]:
         raise RuntimeError("marketplace and plugin names differ")
+    packaged_files = {
+        path.relative_to(plugin_root)
+        for path in plugin_root.rglob("*")
+        if path.is_file()
+    }
+    expected_files = set(tracked_plugin_files(source))
+    if packaged_files != expected_files:
+        raise RuntimeError("packaged plugin contents differ from the tracked release allowlist")
 
 
 def main() -> int:
