@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 import shutil
 import tempfile
+import tomllib
 import unittest
 from pathlib import Path
 
@@ -114,6 +115,31 @@ class RepositoryValidationTests(unittest.TestCase):
         self.assertIn("Project-local installation is the default", skill)
         self.assertIn('default="project"', initializer)
         self.assertIn("--skills plugin", readme)
+
+    def test_mattpocock_source_is_pinned_to_authoritative_release(self) -> None:
+        lock = tomllib.loads((ROOT / "UPSTREAM.lock").read_text(encoding="utf-8"))
+        source = next(item for item in lock["sources"] if item["name"] == "mattpocock-skills")
+
+        self.assertEqual(source["release_tag"], "v1.2.3")
+        self.assertEqual(source["commit"], "6acc160e4e0cd062dbbbd7a1b26ae92855edf07e")
+        self.assertEqual(source["reviewed_head"], source["commit"])
+        self.assertIn("skills/engineering/codebase-design", source["not_imported"])
+        self.assertEqual(lock["skills"]["batch-grill-me"], "mattpocock-skills")
+        self.assertNotIn("mattpocock-batch-grill-me", {item["name"] for item in lock["sources"]})
+
+    def test_v123_alignment_keeps_local_workflow_contracts_explicit(self) -> None:
+        grilling = (ROOT / "skills/grilling/SKILL.md").read_text(encoding="utf-8")
+        guide = (ROOT / "skills/vibe-guide/SKILL.md").read_text(encoding="utf-8")
+        phase_boundaries = (ROOT / "skills/vibe-guide/PHASE-BOUNDARIES.md").read_text(encoding="utf-8")
+
+        self.assertIn("Q1 - <question title>", grilling)
+        self.assertIn("one at a time", grilling)
+        self.assertIn(
+            "Q1 - <question title>",
+            (ROOT / "skills/batch-grill-me/SKILL.md").read_text(encoding="utf-8"),
+        )
+        self.assertIn("PHASE-BOUNDARIES.md", guide)
+        self.assertIn("Use `$handoff`", phase_boundaries)
 
 
 if __name__ == "__main__":

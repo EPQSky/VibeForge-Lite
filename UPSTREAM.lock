@@ -15,8 +15,9 @@ usage = "CI downloads and executes these files from the fixed commit; they are n
 [[sources]]
 name = "mattpocock-skills"
 repository = "https://github.com/mattpocock/skills"
-commit = "9c32629965586e75a9d2206922dccec91e19f2f2"
-reviewed_head = "5b15a47f2d7150f545fbcacbfe381787fc0230dc"
+release_tag = "v1.2.3"
+commit = "6acc160e4e0cd062dbbbd7a1b26ae92855edf07e"
+reviewed_head = "6acc160e4e0cd062dbbbd7a1b26ae92855edf07e"
 license = "MIT"
 copyright = "Copyright (c) 2026 Matt Pocock"
 upstream_paths = [
@@ -34,12 +35,31 @@ upstream_paths = [
   "skills/productivity/grilling",
   "skills/productivity/handoff",
 ]
+not_imported = [
+  "skills/engineering/codebase-design",
+  "skills/engineering/diagnosing-bugs",
+  "skills/engineering/improve-codebase-architecture",
+  "skills/engineering/prototype",
+  "skills/engineering/research",
+  "skills/engineering/resolving-merge-conflicts",
+  "skills/engineering/wayfinder",
+  "skills/engineering/wizard",
+  "skills/in-progress",
+  "skills/misc",
+  "skills/productivity/teach",
+  "skills/productivity/to-questionnaire",
+  "skills/productivity/wait-what",
+  "skills/productivity/writing-for-agents",
+]
 local_changes = [
   "Renamed ask-matt to vibe-guide and removed routes to unavailable upstream skills.",
+  "Adapted the v1.2.3 phase-boundary guidance to Codex tasks, $handoff, optional delegation, and context compaction.",
   "Forked setup-matt-pocock-skills as the idempotent, dry-run-first vibe-init entry point.",
   "Changed user-facing invocation examples from slash syntax to Codex $skill-name syntax.",
   "Removed legacy disable-model-invocation frontmatter in favor of agents/openai.yaml policy.",
-  "Kept the project-approved sequential grilling rhythm instead of the snapshot's batched frontier behavior.",
+  "Kept the project-approved sequential grilling rhythm and exposed v1.2.3's batched frontier behavior through batch-grill-me and batch-grill-with-docs.",
+  "Applied the v1.2.3 grilling question format and fact-finding rule without requiring delegation when unavailable.",
+  "Did not import v1.2.3 references that depend on skills outside the curated VibeForge Lite distribution.",
   "Made implement commits opt-in and expanded code-review to include committed, staged, unstaged, and untracked work.",
   "Added explicit untrusted-data boundaries for issue, pull-request, comment, attachment, and reporter-command inputs.",
   "Limited to-spec to one testing-seam confirmation without reopening product discovery.",
@@ -47,20 +67,6 @@ local_changes = [
   "Aligned local tracker states to ready-for-agent, in-progress, and done.",
   "Added Codex UI metadata and project-specific documentation integrations.",
   "Added dry-run-first project-local skill vendoring with provenance, license, upgrade, and conflict tracking.",
-]
-
-[[sources]]
-name = "mattpocock-batch-grill-me"
-repository = "https://github.com/mattpocock/skills"
-commit = "9603c1cc8118d08bc1b3bf34cf714f62178dea3b"
-license = "MIT"
-copyright = "Copyright (c) 2026 Matt Pocock"
-upstream_paths = [
-  "skills/in-progress/batch-grill-me",
-]
-local_changes = [
-  "Removed legacy disable-model-invocation frontmatter in favor of agents/openai.yaml policy.",
-  "Retained the batch interview as a supported workflow after upstream later removed the in-progress directory.",
 ]
 
 [[sources]]
@@ -78,7 +84,7 @@ local_changes = [
 ]
 
 [skills]
-batch-grill-me = "mattpocock-batch-grill-me"
+batch-grill-me = "mattpocock-skills"
 batch-grill-with-docs = "vibeforge-lite-local-extensions"
 code-review = "mattpocock-skills"
 domain-modeling = "mattpocock-skills"

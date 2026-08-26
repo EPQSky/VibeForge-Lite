@@ -17,6 +17,8 @@ Route only to skills that ship in this project. Do not suggest an unavailable sk
 6. Use `$code-review <fixed-point>` before declaring the implementation complete.
 7. Use `$handoff` when another task or session must continue with the current context.
 
+Keep adjacent phases in the current task when the next phase needs the full reasoning that produced the current result. At a genuine phase boundary, use [PHASE-BOUNDARIES.md](PHASE-BOUNDARIES.md) to choose between continuing, opening a clean task, writing a portable `$handoff`, delegating bounded work, or compacting context.
+
 ## Entry Points
 
 - Use `$vibe-init` once to configure a repository, or again to preview/apply a template migration.
@@ -31,3 +33,4 @@ Route only to skills that ship in this project. Do not suggest an unavailable sk
 - Do not create a spec and tickets for a trivial, well-understood edit.
 - Do not route directly from an unresolved idea to implementation.
 - Keep `CONTEXT.md` limited to domain language; keep workflow instructions in `AGENTS.md` and `docs/agents/`.
+- Make context transitions only at phase boundaries. Do not compact in the middle of an unresolved interview, implementation slice, or verification loop.

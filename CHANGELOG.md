@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.1 - 2026-08-26
+
+- 将 `mattpocock/skills v1.2.3`（commit `6acc160e4e0cd062dbbbd7a1b26ae92855edf07e`）设为派生 skills 的权威上游基线。
+- 吸收该 release 的 phase-boundary 路由、grilling 问题格式、事实调查规则与 spec 术语更新，同时保留 VibeForge Lite 的 Codex 调用、安全边界和顺序访谈适配。
+- 明确记录 `v1.2.3` 中未导入的 skills，以及该 release 已移除但本项目继续维护的 legacy `batch-grill-me`。
+
 ## 0.2.0 - 2026-08-26
 
 - `$vibe-init` 默认把完整 workflow vendoring 到目标项目的 `.agents/skills/`，不依赖用户级安装。

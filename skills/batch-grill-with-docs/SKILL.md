@@ -18,6 +18,7 @@ Run a `$batch-grill-me` session while applying `$domain-modeling` whenever the d
 4. Ask the full current frontier in one round:
    - Number every question.
    - Give a recommended answer for each question.
+   - Format each as `Q<number> - <title>: <question>`, followed by `Recommended: <answer and brief reasoning>`.
    - Mention dependencies when a question is intentionally deferred.
    - Use 简体中文 by default for user-facing questions and summaries in this repo.
 5. Wait for the user's answers before asking the next round.

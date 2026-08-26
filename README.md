@@ -43,7 +43,7 @@ codex plugin marketplace add ./dist/marketplace
 codex plugin add vibeforge-lite@vibeforge-lite
 ```
 
-发布版可以把 `dist/vibeforge-lite-0.2.0.tar.gz` 作为 release artifact。安装或更新 Plugin 后，新开一个 Codex task 让 skills 重新加载。
+发布版可以把 `dist/vibeforge-lite-0.2.1.tar.gz` 作为 release artifact。安装或更新 Plugin 后，新开一个 Codex task 让 skills 重新加载。
 
 ## 安装到项目
 
@@ -112,4 +112,4 @@ Codex 项目级结构判断与官方资料索引见 `docs/codex-project-structur
 
 ## License
 
-本项目使用 MIT License。部分 skills 派生自 `mattpocock/skills`，其 MIT License、固定 commit 与修改说明随仓库分发。
+本项目使用 MIT License。部分 skills 以 `mattpocock/skills` 的 `v1.2.3` release 为权威上游，其 MIT License、固定 commit、未导入范围与本地修改说明随仓库分发。

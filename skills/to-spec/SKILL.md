@@ -3,7 +3,7 @@ name: to-spec
 description: Turn an established conversation into a spec, confirm only its testing seams when needed, and publish it to the configured tracker.
 ---
 
-This skill takes the current conversation context and codebase understanding and produces a spec (you may know this document as a PRD). Do not reopen product discovery or ask a new requirements interview. Synthesize established decisions and use a single testing-seam confirmation only when the seams were not already agreed.
+This skill takes the current conversation context and codebase understanding and produces a spec. Do not reopen product discovery or ask a new requirements interview. Synthesize established decisions and use a single testing-seam confirmation only when the seams were not already agreed.
 
 The issue tracker and triage label vocabulary should have been provided to you. If not, run `$vibe-init` first.
 

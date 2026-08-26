@@ -34,6 +34,6 @@ Project 是默认安装边界：团队可以随仓库共享、审查和固定 wo
 
 ## 上游维护
 
-上游 skill 固定在 `UPSTREAM.lock` 的 commit，不动态跟随 `HEAD`。升级时逐项比较行为、重新应用本地 Codex 适配、更新许可证记录，并执行完整验证矩阵。
+上游 skill 固定在 `UPSTREAM.lock` 的 release tag 与解析后的 commit，不动态跟随 `HEAD`。当前权威基线是 `mattpocock/skills v1.2.3`；只导入 VibeForge Lite 产品边界内的子集，未导入路径和本地保留项也必须在锁文件中明确记录。升级时逐项比较行为、重新应用本地 Codex 适配、更新许可证记录，并执行完整验证矩阵。
 
 CI 从 OpenAI `codex` 仓库的固定 commit 下载 Plugin validator 及其同目录依赖，不追踪浮动分支。升级 validator 时先在本地验证新 commit，再更新 workflow 中的固定值。
