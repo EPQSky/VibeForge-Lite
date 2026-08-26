@@ -14,8 +14,9 @@ Route only to skills that ship in this project. Do not suggest an unavailable sk
 3. Use `$to-spec` once the discussion is stable enough to become a product-facing specification.
 4. Use `$to-tickets` when a multi-session implementation needs independently verifiable vertical slices.
 5. Use `$implement` for one approved ticket or one small, already clear change. Use `$tdd` where a public behavior seam is agreed.
-6. Use `$code-review <fixed-point>` before declaring the implementation complete.
-7. Use `$handoff` when another task or session must continue with the current context.
+6. Use `$execute-spec-tickets` when the user explicitly wants an approved set of tickets executed serially with independent reviews and one scoped commit per completed ticket.
+7. Use `$code-review <fixed-point>` before declaring an ordinary implementation complete; `$execute-spec-tickets` includes this review gate per ticket.
+8. Use `$handoff` when another task or session must continue with the current context.
 
 Keep adjacent phases in the current task when the next phase needs the full reasoning that produced the current result. At a genuine phase boundary, use [PHASE-BOUNDARIES.md](PHASE-BOUNDARIES.md) to choose between continuing, opening a clean task, writing a portable `$handoff`, delegating bounded work, or compacting context.
 

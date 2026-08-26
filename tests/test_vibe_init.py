@@ -37,6 +37,12 @@ class VibeInitTests(unittest.TestCase):
             self.assertTrue(
                 any(item["path"] == ".agents/skills/vibe-init/SKILL.md" for item in payload["actions"])
             )
+            self.assertTrue(
+                any(
+                    item["path"] == ".agents/skills/execute-spec-tickets/SKILL.md"
+                    for item in payload["actions"]
+                )
+            )
 
     def test_fresh_apply_then_repeat_is_noop(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -46,6 +52,7 @@ class VibeInitTests(unittest.TestCase):
             self.assertTrue((target / "AGENTS.md").exists())
             self.assertTrue((target / ".vibecoding/state.json").exists())
             self.assertTrue((target / ".agents/skills/vibe-init/SKILL.md").exists())
+            self.assertTrue((target / ".agents/skills/execute-spec-tickets/SKILL.md").exists())
             self.assertTrue((target / ".agents/vibeforge-lite/UPSTREAM.lock").exists())
             self.assertTrue((target / ".agents/vibeforge-lite/skill-manifest.json").exists())
             expected_skills = {path.parent.name for path in (ROOT / "skills").glob("*/SKILL.md")}
@@ -150,7 +157,7 @@ class VibeInitTests(unittest.TestCase):
 
             self.assertEqual(result.returncode, 0, result.stderr)
             updated = agents.read_text(encoding="utf-8")
-            self.assertIn("<!-- vibeforge-lite:start version=0.2.1 -->", updated)
+            self.assertIn("<!-- vibeforge-lite:start version=0.3.0 -->", updated)
             self.assertNotIn(legacy_namespace, updated)
             self.assertTrue(updated.endswith("\nKeep this exact rule.\n"))
 
@@ -355,7 +362,7 @@ class VibeInitTests(unittest.TestCase):
                 json.dumps(
                     {
                         "schema_version": 1,
-                        "template_version": "0.2.1",
+                        "template_version": "0.3.0",
                         "files": {"../outside": "0" * 64},
                     }
                 ),

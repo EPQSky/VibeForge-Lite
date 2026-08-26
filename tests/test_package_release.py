@@ -140,6 +140,10 @@ class PackageReleaseTests(unittest.TestCase):
 
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertTrue((target / ".agents/skills/vibe-guide/SKILL.md").is_file())
+            self.assertTrue((target / ".agents/skills/execute-spec-tickets/SKILL.md").is_file())
+            self.assertTrue(
+                (target / ".agents/skills/execute-spec-tickets/scripts/validate_ticket_gate.py").is_file()
+            )
             self.assertTrue((target / ".agents/skills/vibe-init/scripts/vibe_init.py").is_file())
             self.assertTrue((target / ".agents/vibeforge-lite/UPSTREAM.lock").is_file())
             self.assertTrue((target / ".agents/vibeforge-lite/skill-manifest.json").is_file())

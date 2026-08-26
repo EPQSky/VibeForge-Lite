@@ -17,6 +17,7 @@ grill -> spec -> tickets -> implement -> review
 | 规格 | `$to-spec` | 发布到配置的本地或远程 tracker |
 | 拆票 | `$to-tickets` | 配置的 tracker 中可独立验收的垂直任务卡 |
 | 实现 | `$implement`，适合时配合 `$tdd` | 聚焦实现与验证，不默认 commit |
+| 顺序执行 | `$execute-spec-tickets` | 按依赖逐票实施、独立复审、硬门禁并提交 |
 | 评审 | `$code-review <review-base>` | 覆盖 commit 与工作树的 Standards + Spec 双轴发现 |
 | 交接 | `$handoff` | 引用现有 artifacts 的会话交接 |
 
@@ -43,7 +44,7 @@ codex plugin marketplace add ./dist/marketplace
 codex plugin add vibeforge-lite@vibeforge-lite
 ```
 
-发布版可以把 `dist/vibeforge-lite-0.2.1.tar.gz` 作为 release artifact。安装或更新 Plugin 后，新开一个 Codex task 让 skills 重新加载。
+发布版可以把 `dist/vibeforge-lite-0.3.0.tar.gz` 作为 release artifact。安装或更新 Plugin 后，新开一个 Codex task 让 skills 重新加载。
 
 ## 安装到项目
 

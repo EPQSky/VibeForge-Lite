@@ -1,6 +1,6 @@
 {
   "name": "vibeforge-lite",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "A Codex-first workflow from idea grilling through specification, tickets, implementation, and review.",
   "author": {
     "name": "VibeForge Lite contributors"
@@ -17,7 +17,7 @@
   "interface": {
     "displayName": "VibeForge Lite",
     "shortDescription": "A disciplined Codex software-delivery workflow.",
-    "longDescription": "Turn an idea into durable decisions, a specification, vertical tickets, tested implementation, and a two-axis review.",
+    "longDescription": "Turn an idea into durable decisions, a specification, vertical tickets, gated implementation, and a two-axis review.",
     "developerName": "VibeForge Lite contributors",
     "category": "Developer Tools",
     "capabilities": [
@@ -27,7 +27,8 @@
     "defaultPrompt": [
       "Use $vibe-guide to choose a workflow for this task.",
       "Use $vibe-init to inspect and initialize this repository.",
-      "Use $grill-with-docs to clarify this feature."
+      "Use $grill-with-docs to clarify this feature.",
+      "Use $execute-spec-tickets to implement an approved ticket set in dependency order."
     ]
   }
 }

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.0 - 2026-08-26
+
+- 新增 `$execute-spec-tickets`，按依赖顺序串行实施已批准 Tickets，并为每票执行独立复审、最多三轮修复、失败隔离和范围受控的 Commit。
+- 新增 `validate_ticket_gate.py`，校验 Tracker 完成状态、验收证据、评审历史、提交范围、提交后快照和修复耗尽后的跳票条件。
+
 ## 0.2.1 - 2026-08-26
 
 - 将 `mattpocock/skills v1.2.3`（commit `6acc160e4e0cd062dbbbd7a1b26ae92855edf07e`）设为派生 skills 的权威上游基线。
