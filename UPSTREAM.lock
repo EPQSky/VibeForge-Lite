@@ -1,5 +1,5 @@
 schema_version = 1
-generated_at = "2026-08-23"
+generated_at = "2026-08-26"
 
 [[tools]]
 name = "openai-codex-plugin-validator"
@@ -46,6 +46,7 @@ local_changes = [
   "Kept parent specs out of implementation-ready state and reused spec-approved seams without repeated TDD confirmation.",
   "Aligned local tracker states to ready-for-agent, in-progress, and done.",
   "Added Codex UI metadata and project-specific documentation integrations.",
+  "Added dry-run-first project-local skill vendoring with provenance, license, upgrade, and conflict tracking.",
 ]
 
 [[sources]]

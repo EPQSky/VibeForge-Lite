@@ -4,6 +4,7 @@ import hashlib
 import importlib.util
 import json
 import subprocess
+import sys
 import tempfile
 import time
 import unittest
@@ -121,6 +122,29 @@ class PackageReleaseTests(unittest.TestCase):
 
             self.assertEqual(int.from_bytes(first.read_bytes()[4:8], "little"), 0)
             self.assertEqual(hashlib.sha256(first.read_bytes()).digest(), hashlib.sha256(second.read_bytes()).digest())
+
+    def test_packaged_initializer_installs_project_local_skills(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            plugin_root = PACKAGE.build_marketplace(base / "marketplace", ROOT)
+            target = base / "target"
+            target.mkdir()
+            initializer = plugin_root / "skills/vibe-init/scripts/vibe_init.py"
+
+            result = subprocess.run(
+                [sys.executable, str(initializer), "--target", str(target), "--apply", "--json"],
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertTrue((target / ".agents/skills/vibe-guide/SKILL.md").is_file())
+            self.assertTrue((target / ".agents/skills/vibe-init/scripts/vibe_init.py").is_file())
+            self.assertTrue((target / ".agents/vibeforge-lite/UPSTREAM.lock").is_file())
+            self.assertTrue((target / ".agents/vibeforge-lite/skill-manifest.json").is_file())
+            state = json.loads((target / ".vibecoding/state.json").read_text(encoding="utf-8"))
+            self.assertEqual(state["skills_mode"], "project")
 
 
 if __name__ == "__main__":

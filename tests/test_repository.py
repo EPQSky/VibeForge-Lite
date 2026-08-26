@@ -106,6 +106,15 @@ class RepositoryValidationTests(unittest.TestCase):
         self.assertIn("approved in the spec or ticket", skill)
         self.assertIn("do not ask again", skill)
 
+    def test_project_local_install_is_the_default(self) -> None:
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        skill = (ROOT / "skills/vibe-init/SKILL.md").read_text(encoding="utf-8")
+        initializer = (ROOT / "skills/vibe-init/scripts/vibe_init.py").read_text(encoding="utf-8")
+        self.assertIn("scripts/install_project.py --target", readme)
+        self.assertIn("Project-local installation is the default", skill)
+        self.assertIn('default="project"', initializer)
+        self.assertIn("--skills plugin", readme)
+
 
 if __name__ == "__main__":
     unittest.main()

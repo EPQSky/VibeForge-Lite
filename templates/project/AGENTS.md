@@ -1,8 +1,9 @@
 # Project Agent Guide
 
-<!-- vibeforge-lite:start version=0.1.0 -->
+<!-- vibeforge-lite:start version=0.2.0 -->
 ## Vibecoding workflow
 
+- Prefer the project-local workflow in `.agents/skills/`; rely on an installed Plugin only when the project explicitly selects Plugin mode.
 - Use `$vibe-guide` when the right workflow is unclear.
 - Clarify unresolved product, domain, and architecture decisions with `$grill-with-docs`; use `$batch-grill-with-docs` when a batch round is preferred.
 - Publish stable decisions through the tracker configured in `docs/agents/issue-tracker.md` with `$to-spec`, then split multi-session work into vertical tickets with `$to-tickets`.

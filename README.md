@@ -43,43 +43,52 @@ codex plugin marketplace add ./dist/marketplace
 codex plugin add vibeforge-lite@vibeforge-lite
 ```
 
-发布版可以把 `dist/vibeforge-lite-0.1.0.tar.gz` 作为 release artifact。安装或更新 Plugin 后，新开一个 Codex task 让 skills 重新加载。
+发布版可以把 `dist/vibeforge-lite-0.2.0.tar.gz` 作为 release artifact。安装或更新 Plugin 后，新开一个 Codex task 让 skills 重新加载。
 
-## 初始化项目
+## 安装到项目
 
-安装 Plugin 后，在目标仓库调用：
-
-```text
-$vibe-init
-```
-
-默认只检查并展示 dry-run。确认后让 Agent 应用，或直接运行同一实现：
+默认安装方式是把完整 workflow 固定在目标仓库，不依赖 Codex 用户目录。Clone 本仓库后运行：
 
 ```bash
-python3 /path/to/VibeForge-Lite/skills/vibe-init/scripts/vibe_init.py --target .
-python3 /path/to/VibeForge-Lite/skills/vibe-init/scripts/vibe_init.py --target . --apply
+python3 scripts/install_project.py --target /path/to/project
+python3 scripts/install_project.py --target /path/to/project --apply
 ```
 
-初始化器维护以下内容：
+第一条命令只展示 dry-run；第二条只在计划无冲突时写入。用户也可以在 Clone 后直接对 Agent 说：
 
+```text
+把 VibeForge Lite 安装到 /path/to/project
+```
+
+Agent 应调用同一脚本、先展示 dry-run，再按用户的安装意图应用。安装结果包括：
+
+- `.agents/skills/` 下完整的 project-local skills、脚本、assets 与 UI metadata；
+- `.agents/vibeforge-lite/` 下版本清单、`UPSTREAM.lock`、许可证与第三方声明；
 - `AGENTS.md` 中一个带版本的受管区块，区块外内容保持不变；
 - `docs/agents/domain.md`、`issue-tracker.md` 与 `triage-labels.md`；
-- 本地 tracker 使用的 `.scratch/` 与通用的 `docs/adr/` 惰性目录骨架；
-- `.vibecoding/state.json` 中的模板版本、选择项与内容哈希。
+- 本地 tracker 使用的 `.scratch/` 与通用的 `docs/adr/` 目录骨架；
+- `.vibecoding/state.json` 中的模板版本、skills 模式与所有受管文件哈希。
 
-它不会默认复制 Plugin skills、创建 `CONTEXT.md`、修改 `.codex/config.toml`、删除旧文件、降低权限或自动提交。
+项目级 skills 与文档遵循同一安全规则：内容与当前发行版一致时 no-op；上次由 VibeForge 写入且未修改时可升级；用户修改、未知同名文件或符号链接会报告 `conflict` 并阻止本次所有写入。
 
-## 不安装 Plugin 的项目级用法
+## Plugin 模式
 
-Codex 的仓库级 skill 目录是 `.agents/skills/`。需要 IDE 场景、团队内固定版本或项目覆盖时，可把所需 skill 目录 vendoring 到目标仓库的 `.agents/skills/`；不要使用旧的 `.codex/skills/` 路径。vendoring 时应同时保留 `UPSTREAM.lock` 与第三方许可。
+安装 Plugin 后可调用 `$vibe-init`。默认仍安装 project-local skills；只有明确希望依赖已安装 Plugin 时才选择轻量模式：
+
+```bash
+python3 /path/to/VibeForge-Lite/skills/vibe-init/scripts/vibe_init.py --target . --skills plugin
+python3 /path/to/VibeForge-Lite/skills/vibe-init/scripts/vibe_init.py --target . --skills plugin --apply
+```
+
+无论哪种模式，初始化器都不会创建 `CONTEXT.md`、修改 `.codex/config.toml`、删除旧文件、降低权限或自动提交。不要使用旧的 `.codex/skills/` 路径。
 
 `templates/project/` 展示初始化后的项目结构，其中 `.codex/config.toml` 仅包含可移植说明，不启用机器专属权限。
 
 ## 升级与卸载
 
-升级前再次运行 `$vibe-init` dry-run。初始化器只自动更新上次未被用户修改的受管文件；检测到用户修改时报告 `conflict`，不会覆盖。
+升级前再次运行安装命令或 `$vibe-init` dry-run。初始化器只自动更新上次未被用户修改的受管文件；检测到用户修改时报告 `conflict`，不会覆盖。项目级安装可以直接使用仓库中已 vendoring 的 `.agents/skills/vibe-init/scripts/vibe_init.py` 自举升级。
 
-卸载 Plugin 不会删除目标仓库文档。若要移除项目集成，先删除 `AGENTS.md` 的 `vibeforge-lite` 受管区块，再按需删除 `.vibecoding/` 和未被项目继续使用的 `docs/agents/` 文件。
+卸载 Plugin 不会删除目标仓库内容。若要移除项目集成，先删除 `AGENTS.md` 的 `vibeforge-lite` 受管区块，再按需删除 `.agents/skills/` 中的 VibeForge skills、`.agents/vibeforge-lite/`、`.vibecoding/` 和未被项目继续使用的 `docs/agents/` 文件；不要删除团队自有的其他 project-local skills。
 
 ## 结构
 

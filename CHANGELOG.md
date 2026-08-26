@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.0 - 2026-08-26
+
+- `$vibe-init` 默认把完整 workflow vendoring 到目标项目的 `.agents/skills/`，不依赖用户级安装。
+- 项目级安装同步保存版本、上游锁与第三方许可证，并通过状态哈希安全升级。
+- 新增 clone 仓库后的 `scripts/install_project.py` 入口，支持对话驱动的指定目录安装。
+- 保留 `--skills plugin`，供明确希望复用已安装 Plugin 的项目选择轻量初始化。
+
 ## 0.1.0 - 2026-08-23
 
 - 首次打包 Codex Plugin 与通用项目模板。

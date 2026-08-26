@@ -157,6 +157,20 @@ def validate(root: Path) -> list[str]:
     if manifest.get("skills") != "./skills/":
         errors.append("plugin skills path must be ./skills/")
 
+    initializer_path = root / "skills/vibe-init/scripts/vibe_init.py"
+    try:
+        initializer = initializer_path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        initializer = ""
+    initializer_version = re.search(r'^TEMPLATE_VERSION = "([^"]+)"$', initializer, re.MULTILINE)
+    if initializer_version is None or initializer_version.group(1) != version:
+        errors.append("plugin and initializer versions must match")
+    expected_marker = f"<!-- vibeforge-lite:start version={version} -->"
+    for rel in ("templates/project/AGENTS.md", "skills/vibe-init/assets/project/AGENTS.md"):
+        path = root / rel
+        if path.exists() and expected_marker not in path.read_text(encoding="utf-8"):
+            errors.append(f"{rel}: managed marker version must match plugin version")
+
     skills_root = root / "skills"
     skill_names = {path.parent.name for path in skills_root.glob("*/SKILL.md")}
     for name in sorted(skill_names):
@@ -201,6 +215,7 @@ def validate(root: Path) -> list[str]:
         root / "THIRD_PARTY_NOTICES.md",
         root / "templates/project/AGENTS.md",
         root / "skills/vibe-init/scripts/vibe_init.py",
+        root / "scripts/install_project.py",
         root / ".github/workflows/validate.yml",
     ]
     for path in required:
