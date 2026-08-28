@@ -84,6 +84,13 @@ class RepositoryValidationTests(unittest.TestCase):
         self.assertIn("git diff <review-base>", skill)
         self.assertIn("git ls-files --others --exclude-standard", skill)
 
+    def test_execute_spec_tickets_limits_blocking_findings(self) -> None:
+        skill = (ROOT / "skills/execute-spec-tickets/SKILL.md").read_text(encoding="utf-8")
+        for impact in ("incorrect-result", "resource-exhaustion", "acceptance-failure"):
+            self.assertIn(impact, skill)
+        self.assertIn("不得增加 `repair_round`", skill)
+        self.assertIn("理论边角和低影响建议", skill)
+
     def test_external_tracker_content_is_treated_as_untrusted_data(self) -> None:
         for rel in ("skills/triage/SKILL.md", "skills/to-tickets/SKILL.md"):
             skill = (ROOT / rel).read_text(encoding="utf-8")

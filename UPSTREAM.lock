@@ -83,6 +83,7 @@ local_changes = [
   "Required explicit confirmation before per-ticket commits when commit authorization is not already clear.",
   "Integrated the skill into VibeForge Lite routing, project guidance, release metadata, and provenance records.",
   "Raised the per-ticket repair limit from five rounds to nine and aligned the hard gate and tests.",
+  "Limited blocking review findings to high-confidence incorrect results, resource exhaustion, or acceptance failures so low-impact advice cannot consume repair rounds.",
 ]
 
 [[sources]]

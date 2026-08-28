@@ -90,7 +90,7 @@ python3 <skill-dir>/scripts/validate_ticket_gate.py \
 
 ## 修复耗尽记录
 
-每个修复耗尽 Ticket 至少记录：Ticket、九轮 Review 与 Repair 历史、剩余 Findings、失败验证、影响的接口或契约、所属改动路径、封存补丁和未跟踪副本位置、候选后续票的直接/传递依赖判断与代码影响证据。
+每个修复耗尽 Ticket 至少记录：Ticket、九轮 Review 与 Repair 历史、剩余 Findings、失败验证、影响的接口或契约、所属改动路径、封存补丁和未跟踪副本位置、候选后续票的直接/传递依赖判断与代码影响证据。每个剩余 Finding 的 `impact` 必须是 `incorrect-result`、`resource-exhaustion` 或 `acceptance-failure`；风格、理论边角和低影响建议不得进入修复耗尽记录。
 
 封存并移出失败代码后，Ticket 文件自身保留 `in-progress`，然后运行：
 
@@ -102,7 +102,7 @@ python3 <skill-dir>/scripts/validate_ticket_gate.py \
 `skip` 门禁要求：
 
 - 正好九轮 Repair、十次结果为 `blocked` 的独立 Review。
-- `blocking_findings` 每项包含严重度、问题、受影响能力和证据。
+- `blocking_findings` 每项包含严重度、问题、影响分类、受影响能力和证据；影响分类只能是错误结果、资源耗尽或验收失败。
 - `repair_exhausted_archive` 指向存在的补丁、未跟踪文件副本目录和恢复说明。
 - 失败代码已经移出工作区，除执行状态外只允许保留失败 Ticket 的 `in-progress` Tracker 修改。
 - `candidate_assessments` 按编号覆盖全部后续未完成票，每票记录传递依赖、代码影响、证据和计算出的 `eligible`。

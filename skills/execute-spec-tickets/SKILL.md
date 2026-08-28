@@ -96,7 +96,9 @@ python3 <skill-dir>/scripts/validate_ticket_gate.py \
 - 使用 `$code-review <ticket-review-base>`。
 - 同时读取 Spec、当前 Ticket、仓库规则和从执行前快照识别出的原有用户修改。
 - 评审从固定 Base 到当前工作区的全部有效变化，包括提交、暂存、未暂存和相关未跟踪文件。
-- 沿 Standards 与 Spec 两个轴审查，优先报告正确性、安全、行为回归、验收缺口和缺失测试。
+- 沿 Standards 与 Spec 两个轴审查，但只有能够用代码、测试、运行行为或明确验收条款证明会导致错误结果、资源耗尽或验收失败的问题，才标记为阻断性 Finding。
+- 安全、回归或测试缺口只有在能够映射到上述三类实际影响之一时才阻断；不得仅凭理论可能性、缺少通用防御或“最佳实践”标签触发修复循环。
+- 风格偏好、命名、注释、结构洁癖、理论边角和低影响建议必须标为非阻断建议或残余风险，不得要求修复。
 - 不修改代码、不提交，只返回按严重度排序的可操作 Findings、验证缺口和残余风险。
 
 每轮评审创建新的 Reviewer，Reviewer 不得是实现或修复 Agent，也不得复用上一轮 Reviewer。主 Agent 将 Reviewer ID、结论和报告证据追加到 `review_history`；不得用同一条结论覆盖历史。
@@ -105,7 +107,13 @@ python3 <skill-dir>/scripts/validate_ticket_gate.py \
 
 ### 5. 最多九轮修复
 
-独立评审没有阻断性 Finding 时直接进入提交。阻断性 Finding 包括实际或高可信的正确性、安全、Spec、回归和必要测试缺口；纯偏好或无行为影响的样式建议不阻断。
+独立评审没有阻断性 Finding 时直接进入提交。主 Agent 只能接受以下三类阻断问题：
+
+1. `incorrect-result`：当前实现会产生错误输出、错误状态、错误副作用或破坏已承诺行为。
+2. `resource-exhaustion`：当前实现会造成无界重试、死循环、不可接受的内存/CPU/连接/存储消耗或同等级资源故障。
+3. `acceptance-failure`：Ticket 验收标准、必需验证或明确的 Spec/仓库契约无法通过。
+
+每个阻断性 Finding 必须标注其中一个影响分类，并给出可复现行为、失败测试、代码路径或验收条款证据。缺少这种映射的 Finding 一律降级为非阻断建议，不得开启修复、不得增加 `repair_round`，也不得仅为重新确认该建议而创建新一轮 Reviewer。风格、理论边角或低影响建议最多记录一次，后续 Reviewer 重复提出时直接引用已有记录。
 
 存在阻断性 Finding 时：
 

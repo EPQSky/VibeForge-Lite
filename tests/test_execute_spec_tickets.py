@@ -152,6 +152,7 @@ class GateScriptTest(unittest.TestCase):
             {
                 "severity": "P1",
                 "issue": "剩余问题",
+                "impact": "incorrect-result",
                 "affected_capabilities": ["demo"],
                 "evidence": "复审报告",
             }
@@ -241,6 +242,14 @@ class GateScriptTest(unittest.TestCase):
     def test_valid_repair_exhausted_skip_passes(self) -> None:
         self.prepare_valid_skip()
         self.assertEqual(self.gate("skip").returncode, 0)
+
+    def test_skip_rejects_low_impact_blocking_finding(self) -> None:
+        self.prepare_valid_skip()
+        self.state["blocking_findings"][0]["impact"] = "style"  # type: ignore[index]
+        self.save_state()
+        result = self.gate("skip")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("错误结果、资源耗尽或验收失败", result.stderr)
 
     def test_skip_requires_all_later_ticket_assessments(self) -> None:
         self.prepare_valid_skip()

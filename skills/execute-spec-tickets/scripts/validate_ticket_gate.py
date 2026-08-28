@@ -16,6 +16,7 @@ STATUS_RE = re.compile(r"^\*\*(?:Status|状态)[:：]\*\*\s*(\S+)\s*$")
 CHECK_RE = re.compile(r"^- \[([ xX])\]\s+(.+?)\s*$")
 ALLOWED_STATUSES = {"ready-for-agent", "in-progress", "done"}
 MAX_REPAIR_ROUNDS = 9
+BLOCKING_IMPACTS = {"incorrect-result", "resource-exhaustion", "acceptance-failure"}
 
 
 class GateError(RuntimeError):
@@ -329,9 +330,11 @@ def validate_skip(repo: Path, ticket: str, state_path: str, state: dict[str, Any
     for finding in findings:
         if not isinstance(finding, dict):
             raise GateError("blocking_findings 每项必须是对象")
-        required = ("severity", "issue", "affected_capabilities", "evidence")
+        required = ("severity", "issue", "impact", "affected_capabilities", "evidence")
         if any(not finding.get(field) for field in required):
-            raise GateError("每条 blocking finding 必须包含严重度、问题、影响能力和证据")
+            raise GateError("每条 blocking finding 必须包含严重度、问题、影响分类、影响能力和证据")
+        if finding["impact"] not in BLOCKING_IMPACTS:
+            raise GateError("blocking finding 的 impact 必须是错误结果、资源耗尽或验收失败")
 
     archive = state.get("repair_exhausted_archive")
     if not isinstance(archive, dict):
