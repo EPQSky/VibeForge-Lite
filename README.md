@@ -44,7 +44,7 @@ codex plugin marketplace add ./dist/marketplace
 codex plugin add vibeforge-lite@vibeforge-lite
 ```
 
-发布版可以把 `dist/vibeforge-lite-0.3.1.tar.gz` 作为 release artifact。安装或更新 Plugin 后，新开一个 Codex task 让 skills 重新加载。
+发布版可以把 `dist/vibeforge-lite-0.3.2.tar.gz` 作为 release artifact。安装或更新 Plugin 后，新开一个 Codex task 让 skills 重新加载。
 
 ## 安装到项目
 

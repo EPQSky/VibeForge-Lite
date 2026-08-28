@@ -134,7 +134,7 @@ class GateScriptTest(unittest.TestCase):
         (archive / "untracked").mkdir()
         (archive / "recovery.md").write_text("恢复说明\n", encoding="utf-8")
         self.state["phase"] = "repair-exhausted"
-        self.state["repair_round"] = 5
+        self.state["repair_round"] = 9
         gate = self.state["ticket_gate"]  # type: ignore[assignment]
         gate["review_history"] = [  # type: ignore[index]
             {
@@ -142,11 +142,11 @@ class GateScriptTest(unittest.TestCase):
                 "result": "blocked",
                 "evidence": f"第 {index} 次仍有阻断问题",
             }
-            for index in range(1, 7)
+            for index in range(1, 11)
         ]
         gate["repair_history"] = [  # type: ignore[index]
             {"round": index, "agent": "implementer-1", "evidence": f"第 {index} 轮修复"}
-            for index in range(1, 6)
+            for index in range(1, 10)
         ]
         self.state["blocking_findings"] = [
             {
@@ -231,12 +231,12 @@ class GateScriptTest(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("修复 Agent", result.stderr)
 
-    def test_more_than_five_repairs_fails(self) -> None:
-        self.state["repair_round"] = 6
+    def test_more_than_nine_repairs_fails(self) -> None:
+        self.state["repair_round"] = 10
         self.save_state()
         result = self.gate("pre-commit")
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("0 到 5", result.stderr)
+        self.assertIn("0 到 9", result.stderr)
 
     def test_valid_repair_exhausted_skip_passes(self) -> None:
         self.prepare_valid_skip()

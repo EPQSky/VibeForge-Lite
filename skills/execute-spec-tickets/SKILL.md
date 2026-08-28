@@ -1,6 +1,6 @@
 ---
 name: execute-spec-tickets
-description: 按指定 Spec 的依赖顺序，由主 Agent 串行委派子 Agent 实施全部 Ticket，并为每张票执行独立代码评审、最多五轮修复、失败隔离和范围受控的 Git 提交。适用于用户要求自动推进一组已批准 Ticket；单张 Ticket 的普通实现应直接使用 implement。
+description: 按指定 Spec 的依赖顺序，由主 Agent 串行委派子 Agent 实施全部 Ticket，并为每张票执行独立代码评审、最多九轮修复、失败隔离和范围受控的 Git 提交。适用于用户要求自动推进一组已批准 Ticket；单张 Ticket 的普通实现应直接使用 implement。
 ---
 
 # 顺序实施 Spec Tickets
@@ -78,7 +78,7 @@ python3 <skill-dir>/scripts/validate_ticket_gate.py \
 - 开始编辑前先审计是否已实现或部分实现，并把证据报告给主 Agent。
 - 保留用户原有修改，只处理当前 Ticket；发现范围冲突时停止报告。
 - 运行 Ticket 所需的聚焦验证和仓库最终验证。
-- 执行 `$implement` 自带的一次实现阶段自审，但不得在内部启动反复的评审修复循环；这次自审属于初始实现，不代替后续独立评审，也不计入外层五轮修复上限。
+- 执行 `$implement` 自带的一次实现阶段自审，但不得在内部启动反复的评审修复循环；这次自审属于初始实现，不代替后续独立评审，也不计入外层九轮修复上限。
 - 覆盖 `$implement` 的默认完成动作：实现子 Agent 只能把本地 Ticket 保持为 `in-progress`，不得改成 `done`，不得勾选验收清单。只有主 Agent 通过独立评审和提交前门禁后才能完成 Tracker。
 - **不得创建、修改或 amend Git Commit**；主 Agent在独立评审通过后统一提交。
 - 返回修改摘要、验证命令与结果、残余风险和所有改动文件。
@@ -103,28 +103,28 @@ python3 <skill-dir>/scripts/validate_ticket_gate.py \
 
 若 Ticket 在本轮开始前已经实现且找不到有意义的 Diff Base，Review 子 Agent 改做独立验收符合性审计：逐条核对验收标准、相关实现与测试。不得为了运行 Diff Review 而伪造空改动。
 
-### 5. 最多五轮修复
+### 5. 最多九轮修复
 
 独立评审没有阻断性 Finding 时直接进入提交。阻断性 Finding 包括实际或高可信的正确性、安全、Spec、回归和必要测试缺口；纯偏好或无行为影响的样式建议不阻断。
 
 存在阻断性 Finding 时：
 
-1. 若当前修复轮数小于 5，将 Ticket 状态保持或恢复为 `in-progress`。
+1. 若当前修复轮数小于 9，将 Ticket 状态保持或恢复为 `in-progress`。
 2. 优先向原实现子 Agent发送完整 Findings，要求只修复已确认问题并重跑受影响验证；原 Agent 不可用时创建新的修复子 Agent。
 3. 主 Agent检查修复 Diff 与验证证据。
 4. 创建新的独立 Review 子 Agent，仍从原 `ticket-review-base` 审查完整结果。
 5. 每发生一次首次独立评审之后的修复计一轮，并把 Agent、Findings 和验证证据追加到 `repair_history`；初次评审本身以及实现阶段的一次自审不计入修复轮数。修复子 Agent 不得自行开启未计数的额外评审修复循环。
 
-第五轮修复后的复审仍有阻断性 Finding 时，该 Ticket 进入“修复耗尽”而不是自动终止整个 Spec：
+第九轮修复后的复审仍有阻断性 Finding 时，该 Ticket 进入“修复耗尽”而不是自动终止整个 Spec：
 
 1. 保持 Ticket 为 `in-progress`，不得勾选未满足的验收项，也不得提交该票。
-2. 在执行状态中记录五轮修复、剩余 Findings、验证结果、受影响能力和改动文件。
+2. 在执行状态中记录九轮修复、剩余 Findings、验证结果、受影响能力和改动文件。
 3. 将该票全部 Agent 所属改动封存为补丁、未跟踪文件副本和恢复说明。只有能够证明这些改动不含用户并发修改时，才可把工作区中的该票改动恢复到 `ticket-review-base`；不得使用整树重置或覆盖用户文件。
 4. 若失败改动无法安全封存和移出工作区，停止整个执行，避免后续 Ticket 的评审和 Commit 混入失败改动。
 5. 从编号靠后的 Ticket 中寻找下一张候选票。只有其直接和传递阻塞链都不包含任何修复耗尽票，并且剩余 Finding 不影响该票使用的共享接口、基础设施、数据契约、安全边界或必需验证时，才可继续。
 6. 判断“互不影响”必须有依赖图和代码影响证据，不能仅因 Ticket 文本未声明 `Blocked by` 就假设独立。无法证明时将候选票记录为被阻塞，继续检查更后的票。
 
-封存和候选判断完成后必须运行 `skip` 硬门禁；门禁会检查五轮记录、剩余 Findings、封存材料、工作区隔离以及对全部后续票的评估。只有门禁通过且返回了 `next_ticket` 才能继续；通过但 `next_ticket=null` 时停止整组并保留恢复材料。
+封存和候选判断完成后必须运行 `skip` 硬门禁；门禁会检查九轮记录、剩余 Findings、封存材料、工作区隔离以及对全部后续票的评估。只有门禁通过且返回了 `next_ticket` 才能继续；通过但 `next_ticket=null` 时停止整组并保留恢复材料。
 
 修复轮数是每张 Ticket 独立计算的；开始下一票时从 0 计数，不能累计前一票的修复次数。
 

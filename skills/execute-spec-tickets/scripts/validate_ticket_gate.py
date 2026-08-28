@@ -15,7 +15,7 @@ from typing import Any
 STATUS_RE = re.compile(r"^\*\*(?:Status|状态)[:：]\*\*\s*(\S+)\s*$")
 CHECK_RE = re.compile(r"^- \[([ xX])\]\s+(.+?)\s*$")
 ALLOWED_STATUSES = {"ready-for-agent", "in-progress", "done"}
-MAX_REPAIR_ROUNDS = 5
+MAX_REPAIR_ROUNDS = 9
 
 
 class GateError(RuntimeError):
