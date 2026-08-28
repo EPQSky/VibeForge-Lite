@@ -1,6 +1,6 @@
 # Project Agent Guide
 
-<!-- vibeforge-lite:start version=0.3.0 -->
+<!-- vibeforge-lite:start version=0.3.1 -->
 ## Vibecoding workflow
 
 - Prefer the project-local workflow in `.agents/skills/`; rely on an installed Plugin only when the project explicitly selects Plugin mode.

@@ -15,6 +15,7 @@ from typing import Any
 STATUS_RE = re.compile(r"^\*\*(?:Status|状态)[:：]\*\*\s*(\S+)\s*$")
 CHECK_RE = re.compile(r"^- \[([ xX])\]\s+(.+?)\s*$")
 ALLOWED_STATUSES = {"ready-for-agent", "in-progress", "done"}
+MAX_REPAIR_ROUNDS = 5
 
 
 class GateError(RuntimeError):
@@ -186,9 +187,9 @@ def validate_evidence(
     if (
         not isinstance(repair_round, int)
         or isinstance(repair_round, bool)
-        or not 0 <= repair_round <= 3
+        or not 0 <= repair_round <= MAX_REPAIR_ROUNDS
     ):
-        raise GateError("repair_round 必须是 0 到 3 的整数")
+        raise GateError(f"repair_round 必须是 0 到 {MAX_REPAIR_ROUNDS} 的整数")
 
     gate = state["ticket_gate"]
     if not isinstance(gate, dict):
@@ -295,8 +296,14 @@ def ticket_number(path: str) -> int:
 
 
 def validate_skip(repo: Path, ticket: str, state_path: str, state: dict[str, Any]) -> None:
-    if state.get("phase") != "repair-exhausted" or state.get("repair_round") != 3:
-        raise GateError("skip 门禁要求 phase=repair-exhausted 且 repair_round=3")
+    if (
+        state.get("phase") != "repair-exhausted"
+        or state.get("repair_round") != MAX_REPAIR_ROUNDS
+    ):
+        raise GateError(
+            "skip 门禁要求 phase=repair-exhausted 且 "
+            f"repair_round={MAX_REPAIR_ROUNDS}"
+        )
     if relative_path(repo, Path(str(state.get("current_ticket", "")))) != ticket:
         raise GateError("状态文件 current_ticket 与跳过 Ticket 不一致")
     if not Path(str(state.get("snapshot_dir", ""))).is_dir():
@@ -314,7 +321,7 @@ def validate_skip(repo: Path, ticket: str, state_path: str, state: dict[str, Any
         raise GateError("ticket_gate.implementer 不能为空")
     for name in ("implementation_audit", "ownership_check", "diff_inspection"):
         require_passed_record(gate, name)
-    validate_review_and_repairs(gate, 3, implementer, "blocked")
+    validate_review_and_repairs(gate, MAX_REPAIR_ROUNDS, implementer, "blocked")
 
     findings = state.get("blocking_findings")
     if not isinstance(findings, list) or not findings:

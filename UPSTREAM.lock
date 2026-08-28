@@ -82,6 +82,7 @@ local_changes = [
   "Made validator command examples portable across project-local and Plugin installations.",
   "Required explicit confirmation before per-ticket commits when commit authorization is not already clear.",
   "Integrated the skill into VibeForge Lite routing, project guidance, release metadata, and provenance records.",
+  "Raised the per-ticket repair limit from three rounds to five and aligned the hard gate and tests.",
 ]
 
 [[sources]]

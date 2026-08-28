@@ -8,11 +8,11 @@
 
 1. `implementing`：实现或补齐中。
 2. `reviewing`：等待或执行独立评审。
-3. `repairing`：第 1 至第 3 轮修复。
+3. `repairing`：第 1 至第 5 轮修复。
 4. `ready-to-commit`：全部验收和证据齐备，已形成精确暂存树。
 5. `committing`：提交前门禁通过，正在创建 Commit。
 6. `committed`：Commit 已创建并写回状态，等待提交后门禁。
-7. `repair-exhausted`：三轮后仍有阻断问题，等待封存和影响判断。
+7. `repair-exhausted`：五轮后仍有阻断问题，等待封存和影响判断。
 
 旧状态使用其他阶段名时，恢复 Agent 必须先根据 Git、Tracker、评审记录和快照迁移；无法唯一判断时停止。
 
@@ -90,7 +90,7 @@ python3 <skill-dir>/scripts/validate_ticket_gate.py \
 
 ## 修复耗尽记录
 
-每个修复耗尽 Ticket 至少记录：Ticket、三轮 Review 与 Repair 历史、剩余 Findings、失败验证、影响的接口或契约、所属改动路径、封存补丁和未跟踪副本位置、候选后续票的直接/传递依赖判断与代码影响证据。
+每个修复耗尽 Ticket 至少记录：Ticket、五轮 Review 与 Repair 历史、剩余 Findings、失败验证、影响的接口或契约、所属改动路径、封存补丁和未跟踪副本位置、候选后续票的直接/传递依赖判断与代码影响证据。
 
 封存并移出失败代码后，Ticket 文件自身保留 `in-progress`，然后运行：
 
@@ -101,7 +101,7 @@ python3 <skill-dir>/scripts/validate_ticket_gate.py \
 
 `skip` 门禁要求：
 
-- 正好三轮 Repair、四次结果为 `blocked` 的独立 Review。
+- 正好五轮 Repair、六次结果为 `blocked` 的独立 Review。
 - `blocking_findings` 每项包含严重度、问题、受影响能力和证据。
 - `repair_exhausted_archive` 指向存在的补丁、未跟踪文件副本目录和恢复说明。
 - 失败代码已经移出工作区，除执行状态外只允许保留失败 Ticket 的 `in-progress` Tracker 修改。
