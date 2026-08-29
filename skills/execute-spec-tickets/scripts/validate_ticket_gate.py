@@ -121,6 +121,9 @@ def validate_review_and_repairs(
     review_history = gate.get("review_history")
     if not isinstance(review_history, list) or len(review_history) != repair_round + 1:
         raise GateError("review_history 数量必须等于 repair_round + 1")
+    final_review = review_history[-1]
+    if isinstance(final_review, dict) and final_result == "passed" and final_review.get("result") == "blocked":
+        raise GateError("最后一次独立评审仍为 blocked，必须继续修复并重新评审，禁止进入提交前门禁")
     reviewers: set[str] = set()
     for index, review in enumerate(review_history):
         if not isinstance(review, dict):

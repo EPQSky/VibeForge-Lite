@@ -204,6 +204,16 @@ class GateScriptTest(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("不同于实现者", result.stderr)
 
+    def test_blocked_review_cannot_enter_pre_commit(self) -> None:
+        gate = self.state["ticket_gate"]  # type: ignore[assignment]
+        gate["review_history"][0]["result"] = "blocked"  # type: ignore[index]
+        gate["review_history"][0]["evidence"] = "仍有验收阻断问题"  # type: ignore[index]
+        self.save_state()
+        result = self.gate("pre-commit")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("必须继续修复并重新评审", result.stderr)
+        self.assertIn("禁止进入提交前门禁", result.stderr)
+
     def test_staged_scope_mismatch_fails(self) -> None:
         self.write("extra.txt", "unexpected\n")
         self.cmd("git", "add", "extra.txt")

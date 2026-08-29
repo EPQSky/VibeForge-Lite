@@ -99,6 +99,12 @@ class RepositoryValidationTests(unittest.TestCase):
         self.assertIn("push、PR、合并或其他外部动作", skill)
         self.assertNotIn("若用户没有明确授权本技能的一票一 Commit 行为", skill)
 
+    def test_execute_spec_tickets_repairs_before_commit_preparation(self) -> None:
+        skill = (ROOT / "skills/execute-spec-tickets/SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("`blocked` 只能进入第 5 节的修复循环", skill)
+        self.assertIn("不得标记 `done`、勾选验收项、形成提交暂存树", skill)
+        self.assertIn("该门禁不是 Review 之后的分流机制", skill)
+
     def test_external_tracker_content_is_treated_as_untrusted_data(self) -> None:
         for rel in ("skills/triage/SKILL.md", "skills/to-tickets/SKILL.md"):
             skill = (ROOT / rel).read_text(encoding="utf-8")

@@ -9,7 +9,7 @@
 1. `implementing`：实现或补齐中。
 2. `reviewing`：等待或执行独立评审。
 3. `repairing`：第 1 至第 9 轮修复。
-4. `ready-to-commit`：全部验收和证据齐备，已形成精确暂存树。
+4. `ready-to-commit`：最后一次独立 Review 已为 `passed`，全部验收和证据齐备，已形成精确暂存树。
 5. `committing`：提交前门禁通过，正在创建 Commit。
 6. `committed`：Commit 已创建并写回状态，等待提交后门禁。
 7. `repair-exhausted`：九轮后仍有阻断问题，等待封存和影响判断。
@@ -48,6 +48,7 @@
 
 - `acceptance` 与 Markdown 验收清单逐条精确对应，每条都必须有独立证据。
 - `review_history` 数量等于 `repair_round + 1`；前面的结果为 `blocked`，最后一次为 `passed`。
+- 最后一次 Review 为 `blocked` 时只能进入 `repairing` 或 `repair-exhausted`，不得标记 Ticket 为 `done`、暂存完成状态、进入 `ready-to-commit` 或调用 `pre-commit`。提交前门禁只复核已通过 Review 的候选，不承担 Review 分流。
 - 每轮 Reviewer 必须不同于实现者和所有修复 Agent，并使用新的 Reviewer ID。
 - `repair_history` 数量等于 `repair_round`，轮次从 1 连续编号，每轮包含执行 Agent 和验证证据。
 - 必需验证只能是 `passed`；非必需验证可以是 `skipped`，但必须说明依据和原因。
@@ -66,7 +67,7 @@ python3 <skill-dir>/scripts/validate_ticket_gate.py \
   --phase tracker --ticket <ticket-path>
 ```
 
-创建 Commit 前，先把阶段设为 `ready-to-commit` 并形成精确暂存树：
+最后一次独立 Review 为 `passed` 且验收、验证全部通过后，才能把阶段设为 `ready-to-commit` 并形成精确暂存树。Review 为 `blocked` 时禁止运行此命令：
 
 ```bash
 python3 <skill-dir>/scripts/validate_ticket_gate.py \

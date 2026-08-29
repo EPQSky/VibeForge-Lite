@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.5 - 2026-08-29
+
+- 明确 `$execute-spec-tickets` 的 Review 分流必须发生在完成与提交准备之前：Review 仍有阻断问题时只能修复并重新评审，不得标记 `done`、暂存完成状态或调用 `pre-commit` 门禁。
+- 提交前门禁新增针对最终 Review 为 `blocked` 的明确拒绝信息，防止把门禁误用为 Review 后的分流器。
+
 ## 0.3.4 - 2026-08-29
 
 - 将 `$execute-spec-tickets` 的一票一 Commit 设为默认行为：明确调用该技能即授权主 Agent 在 Ticket 通过评审、验收和硬门禁后主动提交。

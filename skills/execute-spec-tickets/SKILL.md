@@ -7,6 +7,8 @@ description: 按指定 Spec 的依赖顺序，由主 Agent 串行委派子 Agent
 
 主 Agent 对整个执行序列、工作区归属、评审门禁和提交负责。每次只处理一张 Ticket；即使多张票都已解锁，也不得并行实施。
 
+提交前硬门禁只校验已经完成“评审通过、修复闭环、验收通过”的提交候选，不负责替代 Review 分流。任何一轮独立 Review 仍有阻断性 Finding 时，必须先进入修复并重新 Review；不得标记 `done`、勾选验收项、形成提交暂存树、把阶段设为 `ready-to-commit`，也不得调用 `pre-commit` 门禁碰运气。
+
 创建或恢复执行状态、准备提交、处理修复耗尽时，必须读取 [状态与门禁契约](references/state-and-gates.md)。其中的 `ticket_gate` 和校验命令属于强制门禁，不是可选记录。
 
 先把当前已加载的 `execute-spec-tickets` skill 目录解析为 `<skill-dir>`。项目级安装通常位于 `.agents/skills/execute-spec-tickets/`；Plugin 模式必须使用实际安装目录，不得假设项目中存在 `.agents/skills/`。
@@ -103,11 +105,13 @@ python3 <skill-dir>/scripts/validate_ticket_gate.py \
 
 每轮评审创建新的 Reviewer，Reviewer 不得是实现或修复 Agent，也不得复用上一轮 Reviewer。主 Agent 将 Reviewer ID、结论和报告证据追加到 `review_history`；不得用同一条结论覆盖历史。
 
+记录本轮结论后必须立即分流：`blocked` 只能进入第 5 节的修复循环；`passed` 才能结束 Review 循环并进入第 6 节。不得先执行完成、暂存或提交步骤，再依赖 `pre-commit` 门禁发现 Review 尚未通过。
+
 若 Ticket 在本轮开始前已经实现且找不到有意义的 Diff Base，Review 子 Agent 改做独立验收符合性审计：逐条核对验收标准、相关实现与测试。不得为了运行 Diff Review 而伪造空改动。
 
 ### 5. 最多九轮修复
 
-独立评审没有阻断性 Finding 时直接进入提交。主 Agent 只能接受以下三类阻断问题：
+独立评审没有阻断性 Finding 时结束 Review 循环，进入第 6 节的验收、验证与提交准备；这不等于立即提交。主 Agent 只能接受以下三类阻断问题：
 
 1. `incorrect-result`：当前实现会产生错误输出、错误状态、错误副作用或破坏已承诺行为。
 2. `resource-exhaustion`：当前实现会造成无界重试、死循环、不可接受的内存/CPU/连接/存储消耗或同等级资源故障。
@@ -140,7 +144,7 @@ python3 <skill-dir>/scripts/validate_ticket_gate.py \
 
 ### 6. 验证、完成与提交
 
-独立评审通过后，主 Agent必须：
+独立评审的最后一次结论明确为 `passed` 后，主 Agent 才能开始本节；结论为 `blocked` 时必须返回第 5 节，禁止执行以下任何完成或提交准备动作。主 Agent 必须：
 
 - 确认 Ticket 的每条验收标准均有代码、测试或运行证据支持。
 - 确认 Ticket 必需验收以及仓库要求的最终测试、Lint、类型检查和契约检查已经在当前结果上成功执行。需要 Docker、网络、凭据或额外权限时先申请；未获授权、环境不可用或检查未通过时，保持 `in-progress`、不提交该票，并按本票完成障碍的隔离与影响判断决定能否继续后续票。
@@ -151,7 +155,7 @@ python3 <skill-dir>/scripts/validate_ticket_gate.py \
 - 只暂存当前 Ticket 产生的代码、测试、文档和该 Ticket 状态变更。使用补丁级暂存处理与用户修改共存的文件。
 - 在提交前检查暂存 Diff，确保不包含执行前已经存在的无关修改、其他 Ticket 或秘密文件。
 - 把最终验证命令、是否必需、结果和证据写入 `ticket_gate.verification`；记录本票开始前的 `preexisting_paths`、本票实际 `owned_paths` 和最终 `staged_paths`。三组路径必须完成文件级归属核对，再将阶段设为 `ready-to-commit`。
-- 运行提交前硬门禁；失败时不得提交或人工声明等价通过：
+- 只把已经 Review 通过的提交候选交给提交前硬门禁；该门禁不是 Review 之后的分流机制。门禁失败时不得提交或人工声明等价通过：
 
 ```bash
 python3 <skill-dir>/scripts/validate_ticket_gate.py \
