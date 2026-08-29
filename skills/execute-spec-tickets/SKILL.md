@@ -18,7 +18,7 @@ description: 按指定 Spec 的依赖顺序，由主 Agent 串行委派子 Agent
 3. 若 Ticket 不存在，转用 `$to-tickets` 生成拆分并等待用户批准；不得自行边拆票边实施。
 4. 解析每张票的编号、状态、阻塞边和验收标准。缺失依赖、循环依赖或不合法状态必须先报告并停止。
 5. 默认从最小编号开始，严格按依赖顺序处理全部未完成 Ticket。用户指定起止编号或子集时仍必须检查其阻塞票已经完成。
-6. 若用户没有明确授权本技能的一票一 Commit 行为，在修改工作区前说明提交边界并取得确认；授权提交不包含 push、PR、合并或其他外部动作。
+6. 用户明确调用或要求使用本技能，即视为授权其一票一 Commit 行为。每张 Ticket 通过独立评审、验收和提交前硬门禁后，主 Agent 必须主动创建范围受控的 Commit；不得在执行开始或每票完成时再次询问是否提交。只有用户明确要求不提交或仓库规则禁止提交时才覆盖此默认值；该授权不包含 push、PR、合并或其他外部动作。
 
 ## 执行前基线
 
@@ -158,7 +158,7 @@ python3 <skill-dir>/scripts/validate_ticket_gate.py \
   --phase pre-commit --ticket <ticket-path> --state <state-path>
 ```
 
-- 门禁通过后将状态阶段原子更新为 `committing`，记录提交前 `HEAD` 与暂存树标识，再使用符合仓库惯例且能识别 Ticket 的提交信息创建一个非空 Commit。禁止 amend、合并多个未完成 Ticket 或提交失败状态。
+- 门禁通过后无需询问用户，立即将状态阶段原子更新为 `committing`，记录提交前 `HEAD` 与暂存树标识，再使用符合仓库惯例且能识别 Ticket 的提交信息创建一个非空 Commit。禁止 amend、合并多个未完成 Ticket 或提交失败状态。
 - Commit 明确失败时，立即把 Ticket 状态恢复为 `in-progress` 并排除候选 `done` 变更；保留实现现场和验证证据后停止。提交结果因进程中断而不明确时，不得盲目重试，交由前述提交边界恢复逻辑对账。
 - 记录 Commit Hash 到 `ticket_gate.commit` 和 `completed_commits`，将当前 `ticket_gate` 完整深拷贝到 `ticket_results`，再将阶段更新为 `committed` 并恢复执行前原有暂存状态。提交后门禁通过前不得覆盖当前门禁处理下一票。
 - 运行提交后硬门禁，确认 Commit 父节点、路径、Ticket 状态、验收勾选、修复轮数和评审结论与提交前台账一致：

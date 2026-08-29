@@ -80,7 +80,7 @@ project_paths = [
 local_changes = [
   "Moved the validator tests from the distributable skill scripts directory into the repository test suite.",
   "Made validator command examples portable across project-local and Plugin installations.",
-  "Required explicit confirmation before per-ticket commits when commit authorization is not already clear.",
+  "Treat explicit execute-spec-tickets invocation as authorization for one scoped commit per completed ticket, without repeated confirmation prompts.",
   "Integrated the skill into VibeForge Lite routing, project guidance, release metadata, and provenance records.",
   "Raised the per-ticket repair limit from five rounds to nine and aligned the hard gate and tests.",
   "Limited blocking review findings to high-confidence incorrect results, resource exhaustion, or acceptance failures so low-impact advice cannot consume repair rounds.",

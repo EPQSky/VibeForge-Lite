@@ -91,6 +91,14 @@ class RepositoryValidationTests(unittest.TestCase):
         self.assertIn("不得增加 `repair_round`", skill)
         self.assertIn("理论边角和低影响建议", skill)
 
+    def test_execute_spec_tickets_commits_completed_tickets_by_default(self) -> None:
+        skill = (ROOT / "skills/execute-spec-tickets/SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("即视为授权其一票一 Commit 行为", skill)
+        self.assertIn("不得在执行开始或每票完成时再次询问是否提交", skill)
+        self.assertIn("门禁通过后无需询问用户", skill)
+        self.assertIn("push、PR、合并或其他外部动作", skill)
+        self.assertNotIn("若用户没有明确授权本技能的一票一 Commit 行为", skill)
+
     def test_external_tracker_content_is_treated_as_untrusted_data(self) -> None:
         for rel in ("skills/triage/SKILL.md", "skills/to-tickets/SKILL.md"):
             skill = (ROOT / rel).read_text(encoding="utf-8")
