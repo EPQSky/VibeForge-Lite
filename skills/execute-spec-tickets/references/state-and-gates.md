@@ -35,9 +35,27 @@
     {"name": "完整命令", "required": true, "status": "passed", "evidence": "退出码与关键结果"}
   ],
   "review_history": [
-    {"reviewer": "独立 Reviewer ID", "result": "passed", "evidence": "评审结论或报告位置"}
+    {
+      "reviewer": "独立 Reviewer ID",
+      "result": "blocked",
+      "evidence": "穷尽式评审结论或报告位置",
+      "blocking_findings": [
+        {"id": "R1-F1", "severity": "P1", "issue": "问题摘要", "impact": "incorrect-result", "evidence": "复现、代码路径或验收条款"}
+      ]
+    },
+    {"reviewer": "新的独立 Reviewer ID", "result": "passed", "evidence": "完整复审无阻断问题", "blocking_findings": []}
   ],
-  "repair_history": [],
+  "repair_history": [
+    {
+      "round": 1,
+      "agent": "修复 Agent ID",
+      "finding_ids": ["R1-F1"],
+      "resolutions": [
+        {"finding_id": "R1-F1", "status": "fixed", "evidence": "修复 Diff 与验证证据"}
+      ],
+      "evidence": "整批修复验证摘要"
+    }
+  ],
   "preexisting_paths": ["建立本票 Review Base 时已经存在的修改或未跟踪文件"],
   "owned_paths": ["当前 Ticket 实际产生或明确接管的全部路径"],
   "staged_paths": ["当前 Ticket 的全部暂存路径"]
@@ -47,10 +65,11 @@
 约束：
 
 - `acceptance` 与 Markdown 验收清单逐条精确对应，每条都必须有独立证据。
-- `review_history` 数量等于 `repair_round + 1`；前面的结果为 `blocked`，最后一次为 `passed`。
+- `review_history` 数量等于 `repair_round + 1`；前面的结果为 `blocked`，最后一次为 `passed`。每次 Review 都必须完成当前 Diff 的穷尽式检查，不能遇到首个问题即返回。
+- 每个 `blocked` Review 的 `blocking_findings` 必须是非空数组，Finding ID 在同一批次内唯一；同一问题跨轮仍存在时复用原 ID 和问题定义，新问题使用新 ID。每项包含严重度、问题、合法影响分类和证据。`passed` Review 的 `blocking_findings` 必须为空。
 - 最后一次 Review 为 `blocked` 时只能进入 `repairing` 或 `repair-exhausted`，不得标记 Ticket 为 `done`、暂存完成状态、进入 `ready-to-commit` 或调用 `pre-commit`。提交前门禁只复核已通过 Review 的候选，不承担 Review 分流。
 - 每轮 Reviewer 必须不同于实现者和所有修复 Agent，并使用新的 Reviewer ID。
-- `repair_history` 数量等于 `repair_round`，轮次从 1 连续编号，每轮包含执行 Agent 和验证证据。
+- `repair_history` 数量等于 `repair_round`，轮次从 1 连续编号。第 N 轮的 `finding_ids` 与第 N 次 blocked Review 的全部 Finding ID 必须精确一致，`resolutions` 必须逐项标记 `fixed` 并提供证据；一轮只修复部分 Findings 不得进入下一次 Review。
 - 必需验证只能是 `passed`；非必需验证可以是 `skipped`，但必须说明依据和原因。
 - `preexisting_paths` 来自本票修改前的快照，必须展开到文件级，不能只记录目录名。
 - `owned_paths` 是主 Agent 对照 Review Base、工作区和未跟踪文件后确认的本票全部变化；`staged_paths` 必须与其完全一致并包含 Ticket 文件。
@@ -91,7 +110,7 @@ python3 <skill-dir>/scripts/validate_ticket_gate.py \
 
 ## 修复耗尽记录
 
-每个修复耗尽 Ticket 至少记录：Ticket、九轮 Review 与 Repair 历史、剩余 Findings、失败验证、影响的接口或契约、所属改动路径、封存补丁和未跟踪副本位置、候选后续票的直接/传递依赖判断与代码影响证据。每个剩余 Finding 的 `impact` 必须是 `incorrect-result`、`resource-exhaustion` 或 `acceptance-failure`；风格、理论边角和低影响建议不得进入修复耗尽记录。
+每个修复耗尽 Ticket 至少记录：Ticket、九轮 Review 与 Repair 历史、最后一次 blocked Review 的完整剩余 Findings 批次、失败验证、影响的接口或契约、所属改动路径、封存补丁和未跟踪副本位置、候选后续票的直接/传递依赖判断与代码影响证据。每个剩余 Finding 必须保留 Review 中的 ID，其 `impact` 必须是 `incorrect-result`、`resource-exhaustion` 或 `acceptance-failure`；风格、理论边角和低影响建议不得进入修复耗尽记录。
 
 封存并移出失败代码后，Ticket 文件自身保留 `in-progress`，然后运行：
 

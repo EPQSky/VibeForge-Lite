@@ -99,7 +99,12 @@ class GateScriptTest(unittest.TestCase):
                     {"name": "pytest", "required": True, "status": "passed", "evidence": "2 passed"}
                 ],
                 "review_history": [
-                    {"reviewer": "reviewer-1", "result": "passed", "evidence": "无阻断问题"}
+                    {
+                        "reviewer": "reviewer-1",
+                        "result": "passed",
+                        "evidence": "无阻断问题",
+                        "blocking_findings": [],
+                    }
                 ],
                 "repair_history": [],
                 "preexisting_paths": [],
@@ -141,15 +146,37 @@ class GateScriptTest(unittest.TestCase):
                 "reviewer": f"reviewer-{index}",
                 "result": "blocked",
                 "evidence": f"第 {index} 次仍有阻断问题",
+                "blocking_findings": [
+                    {
+                        "id": f"R{index}-F1",
+                        "severity": "P1",
+                        "issue": f"第 {index} 次阻断问题",
+                        "impact": "incorrect-result",
+                        "evidence": "复审报告",
+                    }
+                ],
             }
             for index in range(1, 11)
         ]
         gate["repair_history"] = [  # type: ignore[index]
-            {"round": index, "agent": "implementer-1", "evidence": f"第 {index} 轮修复"}
+            {
+                "round": index,
+                "agent": "implementer-1",
+                "finding_ids": [f"R{index}-F1"],
+                "resolutions": [
+                    {
+                        "finding_id": f"R{index}-F1",
+                        "status": "fixed",
+                        "evidence": f"第 {index} 轮修复证据",
+                    }
+                ],
+                "evidence": f"第 {index} 轮整批验证",
+            }
             for index in range(1, 10)
         ]
         self.state["blocking_findings"] = [
             {
+                "id": "R10-F1",
                 "severity": "P1",
                 "issue": "剩余问题",
                 "impact": "incorrect-result",
@@ -231,11 +258,37 @@ class GateScriptTest(unittest.TestCase):
         self.state["repair_round"] = 1
         gate = self.state["ticket_gate"]  # type: ignore[assignment]
         gate["review_history"] = [  # type: ignore[index]
-            {"reviewer": "reviewer-1", "result": "blocked", "evidence": "发现问题"},
-            {"reviewer": "reviewer-2", "result": "passed", "evidence": "问题关闭"},
+            {
+                "reviewer": "reviewer-1",
+                "result": "blocked",
+                "evidence": "发现问题",
+                "blocking_findings": [
+                    {
+                        "id": "R1-F1",
+                        "severity": "P1",
+                        "issue": "行为错误",
+                        "impact": "incorrect-result",
+                        "evidence": "失败测试",
+                    }
+                ],
+            },
+            {
+                "reviewer": "reviewer-2",
+                "result": "passed",
+                "evidence": "问题关闭",
+                "blocking_findings": [],
+            },
         ]
         gate["repair_history"] = [  # type: ignore[index]
-            {"round": 1, "agent": "reviewer-2", "evidence": "修复并验证"}
+            {
+                "round": 1,
+                "agent": "reviewer-2",
+                "finding_ids": ["R1-F1"],
+                "resolutions": [
+                    {"finding_id": "R1-F1", "status": "fixed", "evidence": "测试通过"}
+                ],
+                "evidence": "修复并验证",
+            }
         ]
         self.save_state()
         result = self.gate("pre-commit")
@@ -248,6 +301,177 @@ class GateScriptTest(unittest.TestCase):
         result = self.gate("pre-commit")
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("0 到 9", result.stderr)
+
+    def test_repair_round_can_close_complete_finding_batch(self) -> None:
+        self.state["repair_round"] = 1
+        gate = self.state["ticket_gate"]  # type: ignore[assignment]
+        findings = [
+            {
+                "id": finding_id,
+                "severity": "P1",
+                "issue": issue,
+                "impact": "incorrect-result",
+                "evidence": evidence,
+            }
+            for finding_id, issue, evidence in (
+                ("R1-F1", "错误返回值", "失败测试 A"),
+                ("R1-F2", "错误状态变更", "失败测试 B"),
+            )
+        ]
+        gate["review_history"] = [  # type: ignore[index]
+            {
+                "reviewer": "reviewer-1",
+                "result": "blocked",
+                "evidence": "一次评审发现两个问题",
+                "blocking_findings": findings,
+            },
+            {
+                "reviewer": "reviewer-2",
+                "result": "passed",
+                "evidence": "整批问题均已关闭",
+                "blocking_findings": [],
+            },
+        ]
+        gate["repair_history"] = [  # type: ignore[index]
+            {
+                "round": 1,
+                "agent": "implementer-1",
+                "finding_ids": ["R1-F1", "R1-F2"],
+                "resolutions": [
+                    {"finding_id": "R1-F1", "status": "fixed", "evidence": "测试 A 通过"},
+                    {"finding_id": "R1-F2", "status": "fixed", "evidence": "测试 B 通过"},
+                ],
+                "evidence": "受影响验证全部通过",
+            }
+        ]
+        self.save_state()
+
+        self.assertEqual(self.gate("pre-commit").returncode, 0)
+
+    def test_repair_round_rejects_partial_finding_batch(self) -> None:
+        self.state["repair_round"] = 1
+        gate = self.state["ticket_gate"]  # type: ignore[assignment]
+        gate["review_history"] = [  # type: ignore[index]
+            {
+                "reviewer": "reviewer-1",
+                "result": "blocked",
+                "evidence": "发现两个问题",
+                "blocking_findings": [
+                    {
+                        "id": finding_id,
+                        "severity": "P1",
+                        "issue": "阻断问题",
+                        "impact": "incorrect-result",
+                        "evidence": "失败测试",
+                    }
+                    for finding_id in ("R1-F1", "R1-F2")
+                ],
+            },
+            {
+                "reviewer": "reviewer-2",
+                "result": "passed",
+                "evidence": "复审通过",
+                "blocking_findings": [],
+            },
+        ]
+        gate["repair_history"] = [  # type: ignore[index]
+            {
+                "round": 1,
+                "agent": "implementer-1",
+                "finding_ids": ["R1-F1"],
+                "resolutions": [
+                    {"finding_id": "R1-F1", "status": "fixed", "evidence": "测试通过"}
+                ],
+                "evidence": "只修复了一个问题",
+            }
+        ]
+        self.save_state()
+
+        result = self.gate("pre-commit")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("精确覆盖上一轮 Review 的全部 Findings", result.stderr)
+
+    def test_blocked_review_requires_finding_batch(self) -> None:
+        self.state["repair_round"] = 1
+        gate = self.state["ticket_gate"]  # type: ignore[assignment]
+        gate["review_history"] = [  # type: ignore[index]
+            {
+                "reviewer": "reviewer-1",
+                "result": "blocked",
+                "evidence": "声称存在阻断问题",
+                "blocking_findings": [],
+            },
+            {
+                "reviewer": "reviewer-2",
+                "result": "passed",
+                "evidence": "复审通过",
+                "blocking_findings": [],
+            },
+        ]
+        gate["repair_history"] = [  # type: ignore[index]
+            {
+                "round": 1,
+                "agent": "implementer-1",
+                "finding_ids": [],
+                "resolutions": [],
+                "evidence": "没有可追踪的问题",
+            }
+        ]
+        self.save_state()
+
+        result = self.gate("pre-commit")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("完整阻断问题批次", result.stderr)
+
+    def test_repeated_finding_keeps_stable_id_and_definition(self) -> None:
+        self.state["repair_round"] = 2
+        gate = self.state["ticket_gate"]  # type: ignore[assignment]
+        finding = {
+            "id": "R1-F1",
+            "severity": "P1",
+            "issue": "错误返回值",
+            "impact": "incorrect-result",
+            "evidence": "失败测试",
+        }
+        gate["review_history"] = [  # type: ignore[index]
+            {
+                "reviewer": "reviewer-1",
+                "result": "blocked",
+                "evidence": "首次发现",
+                "blocking_findings": [finding],
+            },
+            {
+                "reviewer": "reviewer-2",
+                "result": "blocked",
+                "evidence": "问题仍存在",
+                "blocking_findings": [{**finding, "evidence": "新的失败测试"}],
+            },
+            {
+                "reviewer": "reviewer-3",
+                "result": "passed",
+                "evidence": "问题关闭",
+                "blocking_findings": [],
+            },
+        ]
+        gate["repair_history"] = [  # type: ignore[index]
+            {
+                "round": round_number,
+                "agent": "implementer-1",
+                "finding_ids": ["R1-F1"],
+                "resolutions": [
+                    {
+                        "finding_id": "R1-F1",
+                        "status": "fixed",
+                        "evidence": f"第 {round_number} 次修复证据",
+                    }
+                ],
+                "evidence": f"第 {round_number} 次验证",
+            }
+            for round_number in (1, 2)
+        ]
+        self.save_state()
+
+        self.assertEqual(self.gate("pre-commit").returncode, 0)
 
     def test_valid_repair_exhausted_skip_passes(self) -> None:
         self.prepare_valid_skip()

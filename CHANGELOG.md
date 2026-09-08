@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.6 - 2026-09-08
+
+- `$execute-spec-tickets` 的每轮独立 Review 现在必须穷尽式收集当前可见的全部阻断问题，并使用稳定 Finding ID 形成批次。
+- 每轮 Repair 必须一次性覆盖上一轮的完整 Finding 集合，逐项记录修复证据后才允许重新评审，避免退化成“一轮只修一个问题”。
+
 ## 0.3.5 - 2026-08-29
 
 - 明确 `$execute-spec-tickets` 的 Review 分流必须发生在完成与提交准备之前：Review 仍有阻断问题时只能修复并重新评审，不得标记 `done`、暂存完成状态或调用 `pre-commit` 门禁。

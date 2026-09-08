@@ -1,6 +1,6 @@
 ---
 name: execute-spec-tickets
-description: 按指定 Spec 的依赖顺序，由主 Agent 串行委派子 Agent 实施全部 Ticket，并为每张票执行独立代码评审、最多九轮修复、失败隔离和范围受控的 Git 提交。适用于用户要求自动推进一组已批准 Ticket；单张 Ticket 的普通实现应直接使用 implement。
+description: 按指定 Spec 的依赖顺序，由主 Agent 串行委派子 Agent 实施全部 Ticket，并为每张票执行批量问题发现、整批修复、独立复审、失败隔离和范围受控的 Git 提交。适用于用户要求自动推进一组已批准 Ticket；单张 Ticket 的普通实现应直接使用 implement。
 ---
 
 # 顺序实施 Spec Tickets
@@ -40,7 +40,7 @@ description: 按指定 Spec 的依赖顺序，由主 Agent 串行委派子 Agent
 - 每次委派实现、修复或评审子 Agent 时，显式传递状态文件、快照目录、Review Base 和受保护路径，不依赖子 Agent 自己猜测工作区归属。
 - 每次阶段切换、修复轮数变化、验证完成和提交成功前后都先更新状态文件，保证中断后不会重置 Review Base 或修复计数。
 
-若重新调用时发现状态文件：先验证其 Spec、当前 `HEAD`、快照和工作区摘要，再从记录阶段恢复。若发现 `in-progress` Ticket 却没有可信状态文件或 `$handoff`，或者快照缺失/不匹配，必须停止；不得把遗留实现自动归类为用户原有工作，也不得把修复轮数重置为零。
+若重新调用时发现状态文件：先验证其 Spec、当前 `HEAD`、快照和工作区摘要，再从记录阶段恢复。旧状态若缺少 `blocking_findings`、`finding_ids` 或 `resolutions`，只能依据已保存的完整 Review 报告和修复证据原子补齐；无法逐项重建时停止，不得伪造批次证据或跳过已有修复轮次。若发现 `in-progress` Ticket 却没有可信状态文件或 `$handoff`，或者快照缺失/不匹配，必须停止；不得把遗留实现自动归类为用户原有工作，也不得把修复轮数重置为零。
 
 恢复时必须先处理提交边界：若状态仍为 `committing`，对照记录的提交前 `HEAD`、当前 `HEAD`、暂存树和 Commit 内容判断提交是否已经成功。确认成功则补记 Commit 并运行提交后门禁；确认失败则将 Ticket 保持或恢复为 `in-progress`；无法唯一判定时停止，不得重复提交或解锁下游 Ticket。
 
@@ -99,11 +99,13 @@ python3 <skill-dir>/scripts/validate_ticket_gate.py \
 - 同时读取 Spec、当前 Ticket、仓库规则和从执行前快照识别出的原有用户修改。
 - 评审从固定 Base 到当前工作区的全部有效变化，包括提交、暂存、未暂存和相关未跟踪文件。
 - 沿 Standards 与 Spec 两个轴审查，但只有能够用代码、测试、运行行为或明确验收条款证明会导致错误结果、资源耗尽或验收失败的问题，才标记为阻断性 Finding。
+- 一次 Review 必须完成当前 Diff 的穷尽式检查，集中返回本轮能够发现的全部阻断性 Findings；不得发现第一个问题后提前结束，也不得把同一代码路径、同一失败模式或同一验收条款下已经可见的问题故意拆到后续轮次。
+- 为每个阻断性 Finding 分配本次执行内稳定的 ID：同一问题跨轮仍存在时复用原 ID，新问题使用新 ID，同一批次内不得重复。在 `blocking_findings` 中记录 ID、严重度、问题、影响分类和证据。`blocked` Review 的列表不能为空；`passed` Review 的列表必须为空。
 - 安全、回归或测试缺口只有在能够映射到上述三类实际影响之一时才阻断；不得仅凭理论可能性、缺少通用防御或“最佳实践”标签触发修复循环。
 - 风格偏好、命名、注释、结构洁癖、理论边角和低影响建议必须标为非阻断建议或残余风险，不得要求修复。
 - 不修改代码、不提交，只返回按严重度排序的可操作 Findings、验证缺口和残余风险。
 
-每轮评审创建新的 Reviewer，Reviewer 不得是实现或修复 Agent，也不得复用上一轮 Reviewer。主 Agent 将 Reviewer ID、结论和报告证据追加到 `review_history`；不得用同一条结论覆盖历史。
+每轮评审创建新的 Reviewer，Reviewer 不得是实现或修复 Agent，也不得复用上一轮 Reviewer。主 Agent 将 Reviewer ID、结论、报告证据和完整 `blocking_findings` 批次追加到 `review_history`；不得用同一条结论覆盖历史。
 
 记录本轮结论后必须立即分流：`blocked` 只能进入第 5 节的修复循环；`passed` 才能结束 Review 循环并进入第 6 节。不得先执行完成、暂存或提交步骤，再依赖 `pre-commit` 门禁发现 Review 尚未通过。
 
@@ -122,10 +124,12 @@ python3 <skill-dir>/scripts/validate_ticket_gate.py \
 存在阻断性 Finding 时：
 
 1. 若当前修复轮数小于 9，将 Ticket 状态保持或恢复为 `in-progress`。
-2. 优先向原实现子 Agent发送完整 Findings，要求只修复已确认问题并重跑受影响验证；原 Agent 不可用时创建新的修复子 Agent。
-3. 主 Agent检查修复 Diff 与验证证据。
+2. 把上一轮 Review 的完整 `blocking_findings` 批次一次性交给原实现子 Agent，要求在同一修复轮次中逐项处理全部 Finding；不得只修复其中一项便提前返回。原 Agent 不可用时创建新的修复子 Agent。
+3. 修复 Agent 必须按 Finding ID 返回逐项 resolution 和证据，并重跑覆盖整批问题的受影响验证。主 Agent 检查修复 Diff、验证证据和 ID 覆盖关系；上一轮 Finding 未全部关闭时不得创建下一位 Reviewer。
 4. 创建新的独立 Review 子 Agent，仍从原 `ticket-review-base` 审查完整结果。
-5. 每发生一次首次独立评审之后的修复计一轮，并把 Agent、Findings 和验证证据追加到 `repair_history`；初次评审本身以及实现阶段的一次自审不计入修复轮数。修复子 Agent 不得自行开启未计数的额外评审修复循环。
+5. 每发生一次首次独立评审之后的整批修复计一轮，并把 Agent、上一轮全部 Finding ID、逐项 resolution 和整批验证证据追加到 `repair_history`；门禁要求该轮精确覆盖上一轮 Review 的 Finding 集合。初次评审本身以及实现阶段的一次自审不计入修复轮数。修复子 Agent 不得自行开启未计数的额外评审修复循环。
+
+新的 Reviewer 仍需从固定 Base 全量复审，可能发现上一轮在合理穷尽检查中无法提前识别的新问题；但若只是重复或拆分上一轮已经可见的同源问题，主 Agent 应要求 Reviewer 合并到原 Finding 批次，不得借此消耗新的修复轮次。
 
 第九轮修复后的复审仍有阻断性 Finding 时，该 Ticket 进入“修复耗尽”而不是自动终止整个 Spec：
 

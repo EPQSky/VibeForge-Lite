@@ -85,6 +85,7 @@ local_changes = [
   "Integrated the skill into VibeForge Lite routing, project guidance, release metadata, and provenance records.",
   "Raised the per-ticket repair limit from five rounds to nine and aligned the hard gate and tests.",
   "Limited blocking review findings to high-confidence incorrect results, resource exhaustion, or acceptance failures so low-impact advice cannot consume repair rounds.",
+  "Required each review to report an exhaustive batch of blocking findings and each repair round to close that entire batch with per-finding evidence.",
 ]
 
 [[sources]]
