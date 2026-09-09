@@ -125,7 +125,7 @@ class GateScriptTest(unittest.TestCase):
         args.extend(extra)
         return self.cmd(*args, check=False)
 
-    def prepare_valid_skip(self) -> None:
+    def prepare_valid_stall(self) -> None:
         self.cmd("git", "reset", "-q")
         (self.repo / "demo.py").unlink()
         self.write(
@@ -138,8 +138,8 @@ class GateScriptTest(unittest.TestCase):
         (archive / "failed.patch").write_text("patch\n", encoding="utf-8")
         (archive / "untracked").mkdir()
         (archive / "recovery.md").write_text("恢复说明\n", encoding="utf-8")
-        self.state["phase"] = "repair-exhausted"
-        self.state["repair_round"] = 9
+        self.state["phase"] = "repair-stalled"
+        self.state["repair_round"] = 3
         gate = self.state["ticket_gate"]  # type: ignore[assignment]
         gate["review_history"] = [  # type: ignore[index]
             {
@@ -148,43 +148,52 @@ class GateScriptTest(unittest.TestCase):
                 "evidence": f"第 {index} 次仍有阻断问题",
                 "blocking_findings": [
                     {
-                        "id": f"R{index}-F1",
+                        "id": "R1-F1",
                         "severity": "P1",
-                        "issue": f"第 {index} 次阻断问题",
+                        "issue": "持续存在的阻断问题",
                         "impact": "incorrect-result",
                         "evidence": "复审报告",
                     }
                 ],
             }
-            for index in range(1, 11)
+            for index in range(1, 5)
         ]
         gate["repair_history"] = [  # type: ignore[index]
             {
                 "round": index,
                 "agent": "implementer-1",
-                "finding_ids": [f"R{index}-F1"],
+                "finding_ids": ["R1-F1"],
                 "resolutions": [
                     {
-                        "finding_id": f"R{index}-F1",
+                        "finding_id": "R1-F1",
                         "status": "fixed",
                         "evidence": f"第 {index} 轮修复证据",
                     }
                 ],
                 "evidence": f"第 {index} 轮整批验证",
             }
-            for index in range(1, 10)
+            for index in range(1, 4)
+        ]
+        self.state["stall_assessments"] = [
+            {
+                "round": index,
+                "finding_ids": ["R1-F1"],
+                "status": "no-progress",
+                "evidence": f"第 {index} 轮没有新增验收、验证或行为进展",
+            }
+            for index in range(1, 4)
         ]
         self.state["blocking_findings"] = [
             {
-                "id": "R10-F1",
+                "id": "R1-F1",
                 "severity": "P1",
-                "issue": "剩余问题",
+                "issue": "持续存在的阻断问题",
                 "impact": "incorrect-result",
                 "affected_capabilities": ["demo"],
                 "evidence": "复审报告",
             }
         ]
-        self.state["repair_exhausted_archive"] = {
+        self.state["repair_stalled_archive"] = {
             "patch": str(archive / "failed.patch"),
             "untracked_backup": str(archive / "untracked"),
             "recovery_instructions": str(archive / "recovery.md"),
@@ -193,7 +202,7 @@ class GateScriptTest(unittest.TestCase):
         self.state["candidate_assessments"] = [
             {
                 "ticket": NEXT_TICKET,
-                "depends_on_exhausted": False,
+                "depends_on_stalled": False,
                 "impact": "unaffected",
                 "eligible": True,
                 "evidence": "依赖图和改动路径互不相交",
@@ -295,12 +304,51 @@ class GateScriptTest(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("修复 Agent", result.stderr)
 
-    def test_more_than_nine_repairs_fails(self) -> None:
+    def test_more_than_nine_repairs_are_allowed(self) -> None:
         self.state["repair_round"] = 10
+        gate = self.state["ticket_gate"]  # type: ignore[assignment]
+        finding = {
+            "id": "R1-F1",
+            "severity": "P1",
+            "issue": "持续修复的问题",
+            "impact": "incorrect-result",
+            "evidence": "失败测试",
+        }
+        gate["review_history"] = [  # type: ignore[index]
+            {
+                "reviewer": f"reviewer-{index}",
+                "result": "blocked",
+                "evidence": f"第 {index} 次复审仍阻断",
+                "blocking_findings": [finding],
+            }
+            for index in range(1, 11)
+        ] + [
+            {
+                "reviewer": "reviewer-11",
+                "result": "passed",
+                "evidence": "第十轮修复后通过",
+                "blocking_findings": [],
+            }
+        ]
+        gate["repair_history"] = [  # type: ignore[index]
+            {
+                "round": index,
+                "agent": "implementer-1",
+                "finding_ids": ["R1-F1"],
+                "resolutions": [
+                    {
+                        "finding_id": "R1-F1",
+                        "status": "fixed",
+                        "evidence": f"第 {index} 轮修复证据",
+                    }
+                ],
+                "evidence": f"第 {index} 轮验证",
+            }
+            for index in range(1, 11)
+        ]
         self.save_state()
-        result = self.gate("pre-commit")
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("0 到 9", result.stderr)
+
+        self.assertEqual(self.gate("pre-commit").returncode, 0)
 
     def test_repair_round_can_close_complete_finding_batch(self) -> None:
         self.state["repair_round"] = 1
@@ -473,12 +521,12 @@ class GateScriptTest(unittest.TestCase):
 
         self.assertEqual(self.gate("pre-commit").returncode, 0)
 
-    def test_valid_repair_exhausted_skip_passes(self) -> None:
-        self.prepare_valid_skip()
+    def test_valid_repair_stalled_skip_passes(self) -> None:
+        self.prepare_valid_stall()
         self.assertEqual(self.gate("skip").returncode, 0)
 
     def test_skip_rejects_low_impact_blocking_finding(self) -> None:
-        self.prepare_valid_skip()
+        self.prepare_valid_stall()
         self.state["blocking_findings"][0]["impact"] = "style"  # type: ignore[index]
         self.save_state()
         result = self.gate("skip")
@@ -486,13 +534,58 @@ class GateScriptTest(unittest.TestCase):
         self.assertIn("错误结果、资源耗尽或验收失败", result.stderr)
 
     def test_skip_requires_all_later_ticket_assessments(self) -> None:
-        self.prepare_valid_skip()
+        self.prepare_valid_stall()
         self.state["candidate_assessments"] = []
         self.state["next_ticket"] = None
         self.save_state()
         result = self.gate("skip")
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("覆盖全部后续", result.stderr)
+
+    def test_skip_rejects_round_count_without_stall_evidence(self) -> None:
+        self.prepare_valid_stall()
+        self.state["repair_round"] = 10
+        gate = self.state["ticket_gate"]  # type: ignore[assignment]
+        gate["review_history"] = [  # type: ignore[index]
+            *gate["review_history"][:-1],  # type: ignore[index]
+            *[
+                {
+                    "reviewer": f"reviewer-{index}",
+                    "result": "blocked",
+                    "evidence": "仍有变化中的问题",
+                    "blocking_findings": [{
+                        "id": f"R{index}-F1",
+                        "severity": "P1",
+                        "issue": f"第 {index} 轮新问题",
+                        "impact": "incorrect-result",
+                        "evidence": "失败测试",
+                    }],
+                }
+                for index in range(4, 12)
+            ],
+        ]
+        gate["repair_history"] = [  # type: ignore[index]
+            *gate["repair_history"],  # type: ignore[index]
+            *[
+                {
+                    "round": index,
+                    "agent": "implementer-1",
+                    "finding_ids": [f"R{index}-F1"],
+                    "resolutions": [{
+                        "finding_id": f"R{index}-F1",
+                        "status": "fixed",
+                        "evidence": "修复证据",
+                    }],
+                    "evidence": "验证仍在变化",
+                }
+                for index in range(4, 11)
+            ],
+        ]
+        self.save_state()
+
+        result = self.gate("skip")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("阻断 Finding 集合完全相同", result.stderr)
 
     def test_valid_post_commit_passes(self) -> None:
         self.assertEqual(self.gate("pre-commit").returncode, 0)

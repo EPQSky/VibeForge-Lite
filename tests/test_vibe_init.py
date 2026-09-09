@@ -157,7 +157,7 @@ class VibeInitTests(unittest.TestCase):
 
             self.assertEqual(result.returncode, 0, result.stderr)
             updated = agents.read_text(encoding="utf-8")
-            self.assertIn("<!-- vibeforge-lite:start version=0.3.6 -->", updated)
+            self.assertIn("<!-- vibeforge-lite:start version=0.3.7 -->", updated)
             self.assertNotIn(legacy_namespace, updated)
             self.assertTrue(updated.endswith("\nKeep this exact rule.\n"))
 
@@ -362,7 +362,7 @@ class VibeInitTests(unittest.TestCase):
                 json.dumps(
                     {
                         "schema_version": 1,
-                        "template_version": "0.3.6",
+                        "template_version": "0.3.7",
                         "files": {"../outside": "0" * 64},
                     }
                 ),

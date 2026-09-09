@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.7 - 2026-09-09
+
+- 移除 `$execute-spec-tickets` 每张 Ticket 最多九轮修复的固定上限；只要有可验证进展，修复与独立复审就持续进行。
+- 新增基于证据的 `repair-stalled` 门禁：只有连续三轮 Finding 集合不变且没有验收、验证或行为进展时，才允许封存并评估后续 Ticket。
+
 ## 0.3.6 - 2026-09-08
 
 - `$execute-spec-tickets` 的每轮独立 Review 现在必须穷尽式收集当前可见的全部阻断问题，并使用稳定 Finding ID 形成批次。

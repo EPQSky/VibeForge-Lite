@@ -111,6 +111,12 @@ class RepositoryValidationTests(unittest.TestCase):
         self.assertIn("完整 `blocking_findings` 批次", skill)
         self.assertIn("精确覆盖上一轮 Review 的 Finding 集合", skill)
 
+    def test_execute_spec_tickets_has_no_fixed_repair_limit(self) -> None:
+        skill = (ROOT / "skills/execute-spec-tickets/SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("修复没有固定轮数上限", skill)
+        self.assertIn("连续三轮", skill)
+        self.assertNotIn("最多九轮修复", skill)
+
     def test_external_tracker_content_is_treated_as_untrusted_data(self) -> None:
         for rel in ("skills/triage/SKILL.md", "skills/to-tickets/SKILL.md"):
             skill = (ROOT / rel).read_text(encoding="utf-8")

@@ -15,7 +15,7 @@ from typing import Any
 STATUS_RE = re.compile(r"^\*\*(?:Status|状态)[:：]\*\*\s*(\S+)\s*$")
 CHECK_RE = re.compile(r"^- \[([ xX])\]\s+(.+?)\s*$")
 ALLOWED_STATUSES = {"ready-for-agent", "in-progress", "done"}
-MAX_REPAIR_ROUNDS = 9
+MIN_STALLED_REPAIR_ROUNDS = 3
 BLOCKING_IMPACTS = {"incorrect-result", "resource-exhaustion", "acceptance-failure"}
 
 
@@ -242,12 +242,8 @@ def validate_evidence(
         raise GateError("preexisting_staged_patch_sha256 必须是 SHA-256")
 
     repair_round = state["repair_round"]
-    if (
-        not isinstance(repair_round, int)
-        or isinstance(repair_round, bool)
-        or not 0 <= repair_round <= MAX_REPAIR_ROUNDS
-    ):
-        raise GateError(f"repair_round 必须是 0 到 {MAX_REPAIR_ROUNDS} 的整数")
+    if not isinstance(repair_round, int) or isinstance(repair_round, bool) or repair_round < 0:
+        raise GateError("repair_round 必须是非负整数")
 
     gate = state["ticket_gate"]
     if not isinstance(gate, dict):
@@ -354,14 +350,14 @@ def ticket_number(path: str) -> int:
 
 
 def validate_skip(repo: Path, ticket: str, state_path: str, state: dict[str, Any]) -> None:
+    repair_round = state.get("repair_round")
     if (
-        state.get("phase") != "repair-exhausted"
-        or state.get("repair_round") != MAX_REPAIR_ROUNDS
+        state.get("phase") != "repair-stalled"
+        or not isinstance(repair_round, int)
+        or isinstance(repair_round, bool)
+        or repair_round < MIN_STALLED_REPAIR_ROUNDS
     ):
-        raise GateError(
-            "skip 门禁要求 phase=repair-exhausted 且 "
-            f"repair_round={MAX_REPAIR_ROUNDS}"
-        )
+        raise GateError("skip 门禁要求 phase=repair-stalled 且至少已有三轮修复")
     if relative_path(repo, Path(str(state.get("current_ticket", "")))) != ticket:
         raise GateError("状态文件 current_ticket 与跳过 Ticket 不一致")
     if not Path(str(state.get("snapshot_dir", ""))).is_dir():
@@ -370,7 +366,7 @@ def validate_skip(repo: Path, ticket: str, state_path: str, state: dict[str, Any
 
     status, _ = parse_ticket((repo / ticket).read_text(encoding="utf-8"), ticket)
     if status != "in-progress":
-        raise GateError("修复耗尽 Ticket 必须保持 in-progress")
+        raise GateError("修复停滞 Ticket 必须保持 in-progress")
     gate = state.get("ticket_gate")
     if not isinstance(gate, dict):
         raise GateError("ticket_gate 必须是对象")
@@ -379,11 +375,33 @@ def validate_skip(repo: Path, ticket: str, state_path: str, state: dict[str, Any
         raise GateError("ticket_gate.implementer 不能为空")
     for name in ("implementation_audit", "ownership_check", "diff_inspection"):
         require_passed_record(gate, name)
-    validate_review_and_repairs(gate, MAX_REPAIR_ROUNDS, implementer, "blocked")
+    validate_review_and_repairs(gate, repair_round, implementer, "blocked")
+
+    recent_reviews = gate["review_history"][-(MIN_STALLED_REPAIR_ROUNDS + 1) :]
+    recent_batches = [
+        {str(finding["id"]).strip() for finding in review["blocking_findings"]}
+        for review in recent_reviews
+    ]
+    if len(recent_batches) != MIN_STALLED_REPAIR_ROUNDS + 1 or any(
+        batch != recent_batches[0] for batch in recent_batches[1:]
+    ):
+        raise GateError("repair-stalled 要求连续三轮修复前后的阻断 Finding 集合完全相同")
+    stall_assessments = state.get("stall_assessments")
+    if not isinstance(stall_assessments, list) or len(stall_assessments) != MIN_STALLED_REPAIR_ROUNDS:
+        raise GateError("repair-stalled 必须记录最后三轮 stall_assessments")
+    expected_rounds = list(range(repair_round - MIN_STALLED_REPAIR_ROUNDS + 1, repair_round + 1))
+    for item, expected_round in zip(stall_assessments, expected_rounds, strict=True):
+        if not isinstance(item, dict) or item.get("round") != expected_round:
+            raise GateError("stall_assessments 必须对应最后三轮连续修复")
+        finding_ids = item.get("finding_ids")
+        if not isinstance(finding_ids, list) or {str(value).strip() for value in finding_ids} != recent_batches[0]:
+            raise GateError("stall_assessments 必须引用持续未关闭的完整 Finding 集合")
+        if item.get("status") != "no-progress" or not str(item.get("evidence", "")).strip():
+            raise GateError("每轮 stall assessment 必须标记 no-progress 并包含证据")
 
     findings = state.get("blocking_findings")
     if not isinstance(findings, list) or not findings:
-        raise GateError("修复耗尽必须记录 blocking_findings")
+        raise GateError("修复停滞必须记录 blocking_findings")
     final_review_findings = gate["review_history"][-1]["blocking_findings"]
     final_review_ids = {str(item["id"]).strip() for item in final_review_findings}
     exhausted_ids: set[str] = set()
@@ -397,14 +415,14 @@ def validate_skip(repo: Path, ticket: str, state_path: str, state: dict[str, Any
             raise GateError("blocking finding 的 impact 必须是错误结果、资源耗尽或验收失败")
         finding_id = str(finding["id"]).strip()
         if finding_id in exhausted_ids:
-            raise GateError(f"修复耗尽 blocking_findings 不得重复 ID: {finding_id}")
+            raise GateError(f"修复停滞 blocking_findings 不得重复 ID: {finding_id}")
         exhausted_ids.add(finding_id)
     if exhausted_ids != final_review_ids:
-        raise GateError("修复耗尽 blocking_findings 必须与最后一次 blocked Review 完整一致")
+        raise GateError("修复停滞 blocking_findings 必须与最后一次 blocked Review 完整一致")
 
-    archive = state.get("repair_exhausted_archive")
+    archive = state.get("repair_stalled_archive")
     if not isinstance(archive, dict):
-        raise GateError("修复耗尽必须记录 repair_exhausted_archive")
+        raise GateError("修复停滞必须记录 repair_stalled_archive")
     for field, expected_type in (
         ("patch", "file"),
         ("untracked_backup", "dir"),
@@ -413,7 +431,7 @@ def validate_skip(repo: Path, ticket: str, state_path: str, state: dict[str, Any
         path = Path(str(archive.get(field, "")))
         valid = path.is_file() if expected_type == "file" else path.is_dir()
         if not valid:
-            raise GateError(f"修复耗尽封存缺少 {field}")
+            raise GateError(f"修复停滞封存缺少 {field}")
     isolation = state.get("workspace_isolation")
     if not isinstance(isolation, dict) or isolation.get("status") != "passed":
         raise GateError("workspace_isolation 必须为 passed")
@@ -447,7 +465,7 @@ def validate_skip(repo: Path, ticket: str, state_path: str, state: dict[str, Any
     for item in assessments:
         if not isinstance(item, dict) or not str(item.get("evidence", "")).strip():
             raise GateError("每个候选 Ticket 必须包含影响判断证据")
-        dependency = item.get("depends_on_exhausted")
+        dependency = item.get("depends_on_stalled")
         impact = item.get("impact")
         declared_eligible = item.get("eligible")
         if not isinstance(dependency, bool) or impact not in {"affected", "unaffected", "unknown"}:
